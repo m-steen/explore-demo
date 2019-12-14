@@ -7,6 +7,7 @@ import { observer } from 'mobx-react';
 export interface IGraphicNode {
   node: ViewNode;
   view: GraphicalView;
+  zoom: number;
 }
 
 @observer
@@ -18,7 +19,7 @@ class GraphicNode extends React.Component<IGraphicNode> {
     const strokeColor = this.isSelected ? 'green' : 'gray';
     const style: React.CSSProperties = { stroke: strokeColor, strokeWidth: 2, fill: fillColor };
     return (
-      <DraggableCore onDrag={this.handleDrag}>
+      <DraggableCore onStart={this.handleDragStart} onDrag={this.handleDrag}>
         <g onClick={this.handleClick}>
           <rect x={node.x} y={node.y} width={node.width} height={node.height} style={style} />
           <text x={node.x + 10} y={node.y + 15}>{node.label}</text>
@@ -36,10 +37,14 @@ class GraphicNode extends React.Component<IGraphicNode> {
     e.stopPropagation();
   }
 
+  handleDragStart: DraggableEventHandler = (e, data) => {
+    this.props.view.onNodeSelect(this.props.node);
+  }
+
   handleDrag: DraggableEventHandler = (e, data) => {
     transaction(() => {
-      this.props.node.x += data.deltaX;
-      this.props.node.y += data.deltaY;
+      this.props.node.x += data.deltaX / this.props.zoom;
+      this.props.node.y += data.deltaY / this.props.zoom;
     })
   }
 }

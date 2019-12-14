@@ -1,11 +1,11 @@
 import React from 'react';
-import { observable } from 'mobx';
+import { observable, transaction } from 'mobx';
 import { observer } from 'mobx-react';
-import { Container } from 'react-bootstrap';
 import { Size } from '../model/graphics';
 import { GraphicalView } from '../model/view-model';
 import GraphicNode from './GraphicNode';
 import GraphicLink from './GraphicLink';
+import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 
 export interface ICanvas {
   view: GraphicalView;
@@ -19,7 +19,8 @@ interface CanvasState {
 
 @observer
 class Canvas extends React.Component<ICanvas> {
-  @observable uiState: CanvasState = {
+  @observable
+  uiState: CanvasState = {
     zoom: 1.0, 
     pan: { x: 0, y: 0 }
   };
@@ -31,15 +32,17 @@ class Canvas extends React.Component<ICanvas> {
     const w = size.width / zoom;
     const h = size.height / zoom;
     const viewPort = [pan.x + (size.width - w) / 2, pan.y + (size.height - h) / 2, w, h].join(' ');
-    const style: React.CSSProperties = {...pos, ...size, ...{borderStyle: 'solid'}};
-      return (
-      <Container id='Canvas' style={style} onClick={this.handleClick}>
-        <svg width={size.width} height={size.height} viewBox={viewPort}>
-          {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view}/>)}
-          {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view}/>)}
-        </svg>
+    const style: React.CSSProperties = { ...pos, ...{ borderStyle: 'solid' } };
+    return (
+      <div id='Canvas' style={style} onClick={this.handleClick}>
+        <DraggableCore onDrag={this.handleDrag}>
+          <svg width={'80vw'} height={'80vh'} viewBox={viewPort}>
+            {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view} />)}
+            {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view} zoom={zoom} />)}
+          </svg>
+        </DraggableCore>
         <ZoomControls state={this.uiState} onPlus={this.increaseZoom} onMinus={this.decreaseZoom} />
-      </Container>
+      </div>
     );
   }
 
@@ -64,10 +67,16 @@ class Canvas extends React.Component<ICanvas> {
     }
   }
 
-  handleDrag = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    console.log(e)
+  handleDrag: DraggableEventHandler = (e, data) => {
+    if (!this.props.view.selection) {
+      transaction(() => {
+        this.uiState.pan.x -= data.deltaX / this.uiState.zoom;
+        this.uiState.pan.y -= data.deltaY / this.uiState.zoom;
+      })
+    }
+    e.stopPropagation();
   }
+
 }
 
 interface IZoomControls {
@@ -78,10 +87,10 @@ interface IZoomControls {
 
 const ZoomControls: React.FC<IZoomControls> = (props) => {
   return (
-      <div style={{ position: "absolute", bottom: 0, right: 0 }}>
-        <div style={{ position: "absolute", bottom: 0, right: 10, fontSize: 30, fontWeight: "bold" }}
+      <div style={{ position: "absolute", top: 0, right: 0 }}>
+        <div style={{ position: "absolute", top: 0, right: 10, fontSize: 30, fontWeight: "bold" }}
           onClick={(e) => props.onPlus(props.state)}>+</div>
-        <div style={{ position: "absolute", bottom: 0, right: 60, fontSize: 30, fontWeight: "bold" }}
+        <div style={{ position: "absolute", top: 0, right: 60, fontSize: 30, fontWeight: "bold" }}
           onClick={(e) => props.onMinus(props.state)}>-</div>
       </div>
   )
