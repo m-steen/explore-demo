@@ -18,11 +18,13 @@ class GraphicNode extends React.Component<IGraphicNode> {
     const fillColor = view.nodeColor(node);
     const strokeColor = this.isSelected ? 'green' : 'gray';
     const style: React.CSSProperties = { stroke: strokeColor, strokeWidth: 2, fill: fillColor };
+    const labelPos = { x: node.x + 10, y: node.y + 15 };
+    const textStyle: React.CSSProperties = { fontSize: 16 };
     return (
       <DraggableCore onStart={this.handleDragStart} onDrag={this.handleDrag}>
         <g onClick={this.handleClick}>
           <rect x={node.x} y={node.y} width={node.width} height={node.height} style={style} />
-          <text x={node.x + 10} y={node.y + 15}>{node.label}</text>
+          <text x={labelPos.x} y={labelPos.y} style={textStyle}>{node.label}</text>
         </g>
       </DraggableCore>
     );

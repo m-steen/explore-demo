@@ -1,15 +1,16 @@
-import { GraphicalView, ViewNode, ViewEdge } from '../graphics/model/view-model';
 import { v4 as uuid } from 'uuid';
+import { GraphicalView, ViewNode, ViewEdge } from '../graphics/model/view-model';
 
-class Database {
+class Api {
   url: string = '';
   username: string = '';
   password: string = '';
 
-  loadModel = (view: GraphicalView) => {
+  loadModel: (view: GraphicalView) => Promise<void> = (view: GraphicalView) => {
+    view.layout.stop();
     view.nodes = [];
     view.edges = [];
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
 
       const n1 = new ViewNode();
       n1.label = 'First Element';
@@ -34,10 +35,10 @@ class Database {
       e1.id = uuid();
       view.edges.push(e1);
 
-      setTimeout(resolve, 100);
+      // simulating 1s latency in retrieving model
+      setTimeout(resolve, 1000);
     });
-
   }
 }
 
-export default Database;
+export default Api;

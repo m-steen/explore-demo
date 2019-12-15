@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Button, ButtonToolbar, Container, Row } from 'react-bootstrap';
+import React from 'react';
+import { ButtonToolbar, Container, Row } from 'react-bootstrap';
 import "bootstrap/dist/css/bootstrap.min.css";
 import './App.css';
+import Application from './model/application';
 import Canvas from './graphics/ui/Canvas';
-import { GraphicalView, ViewNode } from './graphics/model/view-model';
-import Database from './backend/api';
+import { ButtonControl, Command } from './graphics/ui/editor-controls';
+import { ViewNode } from './graphics/model/view-model';
 
-const store = {
-  db: new Database(),
-  view: new GraphicalView(),
-}
-// const view = new GraphicalView();
+const app = new Application();
+app.title = 'Explore demo';
 
-store.view.nodeColor = (node: ViewNode) => {
+app.view.nodeColor = (node: ViewNode) => {
   if (node.label === 'First Element') {
     return "#B8E7FC";
   } else {
@@ -25,43 +23,26 @@ const App: React.FC = () => {
   return (
     <Container className="App">
       <Row>
-        <h1>Explore demo</h1>
+        <h1>{app.title}</h1>
       </Row>
       <Row>
         <ButtonToolbar className="p-1">
-          <LoadButton />
-          <Button className="mr-1">Layout</Button>
+          <ButtonControl label={'Load'} command={onLoad} />
+          <ButtonControl label={'Layout'} command={onLayout} />
         </ButtonToolbar>
       </Row>
       <Row>
-        <Canvas view={store.view} size={{ width: 1000, height: 600 }} />
+        <Canvas view={app.view} size={{ width: 1000, height: 600 }} />
       </Row>
     </Container>
   );
 }
 
-function LoadButton() {
-  const [isLoading, setLoading] = useState(false);
+const onLoad: Command = () => app.api.loadModel(app.view);
 
-  useEffect(() => {
-    if (isLoading) {
-      store.db.loadModel(store.view).then(() => {
-        setLoading(false);
-      });
-    }
-  }, [isLoading]);
+// Load the model on startup...
+app.api.loadModel(app.view);
 
-  const handleClick = () => setLoading(true);
-
-  return (
-    <Button className="mr-1"
-      variant="primary"
-      disabled={isLoading}
-      onClick={!isLoading ? handleClick : () => {}}
-    >
-      {isLoading ? 'Loading…' : 'Load'}
-    </Button>
-  );
-}
+const onLayout: Command = () => app.view.layout.apply();
 
 export default App;

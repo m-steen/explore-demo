@@ -1,5 +1,8 @@
 import { observable } from 'mobx';
 import { Color } from 'csstype';
+import { TreeLayout } from '../layout/tree-layout';
+import Ticker from '../tools/ticker';
+import Editor from '../editor';
 
 export class ViewElement {
   id: string = '';
@@ -28,8 +31,12 @@ export class ViewEdge extends ViewElement {
 
 export class GraphicalView {
   @observable nodes: ViewNode[] = [];
-  edges: ViewEdge[] = [];
+  @observable edges: ViewEdge[] = [];
   @observable selection: ViewElement | null = null;
+  layout = new TreeLayout(this);
+  ticker = new Ticker();
+
+  constructor(private editor: Editor) {}
 
   nodeColor: (node: ViewNode) => Color = (node: ViewNode) => 'lightgrey';
 
@@ -43,4 +50,21 @@ export class GraphicalView {
     console.log('Selected Edge ' + edge.label)
   }
 
+  // applyLayout = () => {
+  //   this.startLayout();
+  //   return when(() => !this.editor.state.isLayouting);
+  
+  // }
+
+  // startLayout = () => {
+  //   this.ticker.registerAction('layout', this.layout.updateLayout);
+  //   this.editor.state.isLayouting = true;
+
+  // }
+
+  // stopLayout = () => {
+  //   this.ticker.unregisterAction('layout');
+  //   this.editor.state.isLayouting = false;
+
+  // }
 }
