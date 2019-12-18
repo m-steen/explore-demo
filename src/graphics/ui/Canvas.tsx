@@ -69,6 +69,7 @@ class Canvas extends React.Component<ICanvas> {
 
   handleDrag: DraggableEventHandler = (e, data) => {
     if (!this.props.view.selection) {
+      this.props.view.layout.stop();
       transaction(() => {
         this.uiState.pan.x -= data.deltaX / this.uiState.zoom;
         this.uiState.pan.y -= data.deltaY / this.uiState.zoom;

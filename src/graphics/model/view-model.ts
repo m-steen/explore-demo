@@ -51,11 +51,13 @@ export class GraphicalView {
   nodeColor: (node: ViewNode) => Color = (node: ViewNode) => 'lightgrey';
 
   onNodeSelect = (node: ViewNode) => {
+    this.layout.stop();
     this.selection = node;
     console.log('Selected Node ' + node.label)
   }
 
   onEdgeSelect = (edge: ViewEdge) => {
+    this.layout.stop();
     this.selection = edge;
     console.log('Selected Edge ' + edge.label)
   }
