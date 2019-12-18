@@ -1,8 +1,8 @@
-import { observable } from 'mobx';
+import { observable, computed } from 'mobx';
 import { Color } from 'csstype';
-import { TreeLayout } from '../layout/tree-layout';
 import Ticker from '../tools/ticker';
 import Editor from '../editor';
+import { ForceLayout } from '../layout/force-layout';
 
 export class ViewElement {
   id: string = '';
@@ -19,13 +19,13 @@ export class ViewNode extends ViewElement {
 }
 
 export class ViewEdge extends ViewElement {
-  from: ViewElement;
-  to: ViewElement;
+  source: ViewNode;
+  target: ViewNode;
 
-  constructor(from: ViewElement, to: ViewElement) {
+  constructor(source: ViewNode, target: ViewNode) {
     super();
-    this.from = from;
-    this.to = to;
+    this.source = source;
+    this.target = target;
   }
 }
 
@@ -33,7 +33,17 @@ export class GraphicalView {
   @observable nodes: ViewNode[] = [];
   @observable edges: ViewEdge[] = [];
   @observable selection: ViewElement | null = null;
-  layout = new TreeLayout(this);
+  x = 0;
+  y = 0;
+  w = 1000;
+  h = 600;
+  zoom = 1.0;
+  @computed get minX() { return this.nodes.reduce((min, n) => Math.min(min, n.x), this.w/2)}
+  @computed get maxX() { return this.nodes.reduce((max, n) => Math.max(max, n.x), 0)}
+  @computed get minY() { return this.nodes.reduce((min, n) => Math.min(min, n.y), this.h/2)}
+  @computed get maxY() { return this.nodes.reduce((max, n) => Math.max(max, n.y), 0)}
+
+  layout = new ForceLayout(this);
   ticker = new Ticker();
 
   constructor(private editor: Editor) {}
@@ -50,21 +60,4 @@ export class GraphicalView {
     console.log('Selected Edge ' + edge.label)
   }
 
-  // applyLayout = () => {
-  //   this.startLayout();
-  //   return when(() => !this.editor.state.isLayouting);
-  
-  // }
-
-  // startLayout = () => {
-  //   this.ticker.registerAction('layout', this.layout.updateLayout);
-  //   this.editor.state.isLayouting = true;
-
-  // }
-
-  // stopLayout = () => {
-  //   this.ticker.unregisterAction('layout');
-  //   this.editor.state.isLayouting = false;
-
-  // }
 }

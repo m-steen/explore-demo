@@ -8,6 +8,7 @@ class Ticker {
   private subscribers = new Map<string, Action>();
 
   registerAction = (name: string, action: Action) => {
+    console.log(format('registerAction: %s', name))
     this.subscribers.set(name, action);
     if (!this.started) {
       this.start();
@@ -15,6 +16,7 @@ class Ticker {
   }
 
   unregisterAction = (name: string) => {
+    console.log(format('unregisterAction: %s', name))
     this.subscribers.delete(name);
     if (this.subscribers.size === 0) {
       this.stop();

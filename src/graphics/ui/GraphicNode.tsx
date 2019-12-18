@@ -18,8 +18,8 @@ class GraphicNode extends React.Component<IGraphicNode> {
     const fillColor = view.nodeColor(node);
     const strokeColor = this.isSelected ? 'green' : 'gray';
     const style: React.CSSProperties = { stroke: strokeColor, strokeWidth: 2, fill: fillColor };
-    const labelPos = { x: node.x + 10, y: node.y + 15 };
-    const textStyle: React.CSSProperties = { fontSize: 16 };
+    const labelPos = { x: node.x + node.width / 2, y: node.y + node.height + 15 };
+    const textStyle: React.CSSProperties = { fontSize: 12, textAlign: "center" };
     return (
       <DraggableCore onStart={this.handleDragStart} onDrag={this.handleDrag}>
         <g onClick={this.handleClick}>
