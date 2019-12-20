@@ -34,9 +34,10 @@ class Api {
               node = new ViewNode();
               node.id = obj.id;
               node.label = obj.name;
+              node.layer = obj.meta.category;
+              node.type = obj.meta.types[0];
               node.width = 40;
               node.height = 16;
-              node.layer = obj.meta.category;
               view.nodes.push(node);
             }
           })
@@ -63,15 +64,16 @@ class Api {
               target = new ViewNode();
               target.id = t.id;
               target.label = t.name;
+              target.layer = t.meta.category;
+              target.type = t.meta.types[0];
               target.width = 40;
               target.height = 16;
-              target.layer = t.meta.category;
               view.nodes.push(target);
             }
             let edge = view.edges.find((x) => r.id === x.id);
             if (edge === undefined) {
               edge = new ViewEdge(source, target);
-              edge.label = r.meta.types[1];
+              edge.label = r.meta.types[1].replace('Relation', '');
               view.edges.push(edge);
             }
           })

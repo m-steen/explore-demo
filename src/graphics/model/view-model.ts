@@ -16,6 +16,7 @@ export class ViewNode extends ViewElement {
   width: number = 0;
   height: number = 0;
   layer: string = '';
+  type: string = '';
 
   onSelect: (e: any) => void = (e) => {};
 }
