@@ -40,7 +40,7 @@ export class ForceLayout extends BaseLayout implements ILayout {
     this.simulation.force('charge', forceManyBody().strength(-10));
     this.simulation.force('collision', forceCollide(100).strength(1));
     this.simulation.force('link', forceLink(links).id((d) => (d as d3Node).id).strength(0.1));
-    this.simulation.force('center', forceCenter((this.view.maxX - this.view.minX) / 2, (this.view.maxY - this.view.minY) / 2));
+    this.simulation.force('center', forceCenter(this.view.w / 2, this.view.h / 2));
     return super.apply();
   }
 

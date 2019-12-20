@@ -9,7 +9,6 @@ class EditorState {
 }
 
 class Editor {
-  @observable title = '';
   state = new EditorState();
   api = new Api();
   view = new GraphicalView(this);

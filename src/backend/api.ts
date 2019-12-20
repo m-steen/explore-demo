@@ -1,15 +1,90 @@
+import { Database, aql } from 'arangojs';
 import { v4 as uuid } from 'uuid';
 import { GraphicalView, ViewNode, ViewEdge } from '../graphics/model/view-model';
 
 class Api {
-  url: string = '';
-  username: string = '';
+  url: string = 'http://bdd-2016-05.bizzdesign.nl:8529';
+  username: string = 'root';
   password: string = '';
+  db: Database;
+
+  constructor() {
+    this.db = new Database({
+      url: this.url,
+    })
+  }
+
+  getObjects: (query: string, view: GraphicalView) => Promise<void> =
+    (query, view) => {
+      view.layout.stop();
+      view.nodes = [];
+      view.edges = [];
+      console.log(query)
+      const aquery = aql`
+        FOR obj IN FULLTEXT("Objects", "name", ${query})
+        RETURN obj
+      `
+      console.log(aquery)
+      return this.db.query(aquery)
+        .then((array) => {
+          array.each((obj) => {
+            console.log(obj)
+            let node = view.nodes.find((x) => obj.id === x.id);
+            if (node === undefined) {
+              node = new ViewNode();
+              node.id = obj.id;
+              node.label = obj.name;
+              node.width = 40;
+              node.height = 16;
+              node.layer = obj.meta.category;
+              view.nodes.push(node);
+            }
+          })
+        });
+    }
+
+  getRelationsFrom: (node: ViewNode, view: GraphicalView) => Promise<void> =
+    (source, view) => {
+      const aquery = aql`
+        FOR startObj IN Objects
+          FILTER startObj.id == ${source.id}
+          FOR v, e, p IN 1..1 OUTBOUND startObj
+            GRAPH 'objectRelations'
+            RETURN {source: startObj, relation: e, target: v}
+      `
+      console.log(aquery)
+      return this.db.query(aquery)
+        .then((array) => {
+          array.each((result) => {
+            console.log(result)
+            const { relation: r, target: t } = result;
+            let target = view.nodes.find((x) => t.id === x.id);
+            if (target === undefined) {
+              target = new ViewNode();
+              target.id = t.id;
+              target.label = t.name;
+              target.width = 40;
+              target.height = 16;
+              target.layer = t.meta.category;
+              view.nodes.push(target);
+            }
+            let edge = view.edges.find((x) => r.id === x.id);
+            if (edge === undefined) {
+              edge = new ViewEdge(source, target);
+              edge.label = r.meta.types[1];
+              view.edges.push(edge);
+            }
+          })
+        });
+    }
 
   loadModel: (view: GraphicalView) => Promise<void> = (view: GraphicalView) => {
     view.layout.stop();
-    view.nodes = [];
     view.edges = [];
+    view.nodes = [];
+    view.zoom = 1.0;
+    view.x = 0;
+    view.y = 0;
     return new Promise((resolve) => {
 
       const n1 = new ViewNode();
