@@ -1,0 +1,12 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120.00 120.00">
+<g transform="translate(0.000000 0.000000) scale(0.800000,0.800000)">
+<g transform=" translate(2.000000, 2.000000) scale(13.272727,13.272727) translate(-0.000000, -0.000000)" style="fill-opacity:1.0;stroke-width:0.4521;">
+<circle style="stroke-width:1.05" cx="6" cy="6" r ="4"/>
+<circle style="fill:#000000" cx="6" cy="6" r ="1"/>
+<path d="M 2,2 L 10,10"/>
+<path d="M 2,10 L 10,2"/>
+<path d="M 0.5,6 L 11.5,6"/>
+<path d="M 6,0.5 L 6,11.5"/>
+</g>
+</g>
+</svg>

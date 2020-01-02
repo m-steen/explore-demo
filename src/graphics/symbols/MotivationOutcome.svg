@@ -1,0 +1,24 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120.00 120.00">
+<g transform="translate(0.000000 0.000000) scale(0.800000,0.800000)">
+<g transform=" translate(2.000000, 2.434524) scale(0.869048,0.869048) translate(-238.000000, -246.000000)" style="fill-opacity:1.0;stroke-width:6.9041;">
+<path
+
+ style="stroke:#000000;fill:none" d="M 360,352.36218 A 60,60 0 1 1 359.99995,352.28413" id="path4"/>
+<path
+
+ style="stroke:#000000;fill:none" d="M 340,352.36218 A 40,40 0 1 1 339.99997,352.31015" id="path6"/>
+<path
+
+ style="fill:none;stroke:#000000" d="m 320,352.36218 a 20,20 0 1 1 -2e-5,-0.026" id="path8"/>
+<path
+
+ style="fill:none;stroke:#000000;stroke-width:15;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none" d="m 378.41315,273.35811 -70.34336,72.89506" id="path3761" connector-curvature="0"/>
+<path
+
+ style="fill:none;stroke:#000000;stroke-width:9.91467953;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" d="m 401.07359,282.27089 -49.56986,17.55663 11.12793,-48.53893" id="path2991"/>
+<path
+
+ style="fill:#000000;stroke:#000000;stroke-width:9.25607586;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none" d="m 297.38061,352.98157 36.82641,-6.57708 -29.07348,-28.18748 z" id="path3762"/>
+</g>
+</g>
+</svg>

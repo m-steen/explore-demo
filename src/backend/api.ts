@@ -37,7 +37,7 @@ class Api {
               node.layer = obj.meta.category;
               node.type = obj.meta.types[0];
               node.width = 40;
-              node.height = 16;
+              node.height = 30;
               view.nodes.push(node);
             }
           })
@@ -67,12 +67,13 @@ class Api {
               target.layer = t.meta.category;
               target.type = t.meta.types[0];
               target.width = 40;
-              target.height = 16;
+              target.height = 30;
               view.nodes.push(target);
             }
             let edge = view.edges.find((x) => r.id === x.id);
             if (edge === undefined) {
               edge = new ViewEdge(source, target);
+              edge.id = r.id;
               edge.label = r.meta.types[1].replace('Relation', '');
               view.edges.push(edge);
             }
@@ -95,7 +96,7 @@ class Api {
       n1.x = 300;
       n1.y = 200;
       n1.width = 40;
-      n1.height = 16;
+      n1.height = 30;
       view.nodes.push(n1);
 
       const n2 = new ViewNode();
@@ -104,7 +105,7 @@ class Api {
       n2.x = 600;
       n2.y = 400;
       n2.width = 40;
-      n2.height = 16;
+      n2.height = 30;
       view.nodes.push(n2);
 
       const n3 = new ViewNode();
@@ -113,7 +114,7 @@ class Api {
       n3.x = 500;
       n3.y = 300;
       n3.width = 40;
-      n3.height = 16;
+      n3.height = 30;
       view.nodes.push(n3);
 
       const e1 = new ViewEdge(n1, n2);
