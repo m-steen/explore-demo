@@ -24,7 +24,7 @@ class Canvas extends React.Component<ICanvas> {
     const style: React.CSSProperties = { ...pos, ...{ borderStyle: 'solid' } };
     return (
       <div>
-      <div id='Canvas' style={style} onClick={this.handleClick}>
+      <div id='Canvas' style={style} onClick={this.handleClick} onWheel={this.onWheel}>
         <DraggableCore onDrag={this.handleDrag}>
           <svg width={'80vw'} height={'80vh'} viewBox={viewPort}>
             {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view} />)}
@@ -45,6 +45,14 @@ class Canvas extends React.Component<ICanvas> {
   handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     this.props.view.selection = null;
     e.stopPropagation();
+  }
+
+  onWheel = (e: React.WheelEvent) => {
+    if (e.altKey) {
+      this.props.view.zoom -= e.deltaY / 2000;
+    } else {
+      this.props.view.origin.y -= e.deltaY / 10;
+    }
   }
 
   increaseZoom = (view: GraphicalView) => {
