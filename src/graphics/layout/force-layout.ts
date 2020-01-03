@@ -56,6 +56,7 @@ export class ForceLayout extends BaseLayout implements ILayout {
         }
       })
     )
+    this.view.zoomToFit();
     if (this.simulation.alpha() <= this.simulation.alphaMin()) {
       this.simulation.stop();
       this.stop();

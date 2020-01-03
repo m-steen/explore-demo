@@ -86,8 +86,7 @@ class Api {
     view.edges = [];
     view.nodes = [];
     view.zoom = 1.0;
-    view.x = 0;
-    view.y = 0;
+    view.origin = { x: 0, y: 0 };
     return new Promise((resolve) => {
 
       const n1 = new ViewNode();

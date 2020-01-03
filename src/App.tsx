@@ -58,19 +58,4 @@ class App extends React.Component {
   }
 }
 
-// const onLoad: Command = () => app.api.loadModel(app.view);
-
-// // Load the model on startup...
-// app.api.loadModel(app.view);
-
-// const onLayout: Command = () => app.view.layout.apply();
-
-// const onQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//   app.query = e.target.value;
-// }
-
-// const onQuerySubmit = (e: React.FormEvent<HTMLElement>) => {
-//   app.api.loadModel(app.view);
-// }
-
 export default App;

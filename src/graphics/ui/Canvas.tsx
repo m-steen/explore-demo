@@ -6,15 +6,11 @@ import { GraphicalView } from '../model/view-model';
 import GraphicNode from './GraphicNode';
 import GraphicLink from './GraphicLink';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
+import { ZoomIn, ZoomOut, ZoomOutMap } from '@material-ui/icons';
 
 export interface ICanvas {
   view: GraphicalView;
   size: Size;
-}
-
-interface CanvasState {
-  zoom: number;
-  pan: {x: number, y: number}
 }
 
 @observer
@@ -24,17 +20,24 @@ class Canvas extends React.Component<ICanvas> {
     const { view } = this.props;
     const { x, y, w, h } = view;
     const pos: React.CSSProperties = { position: "absolute" };
-    const viewPort = [x + (view.size.width - w) / 2, y + (view.size.height - h) / 2, w, h].join(' ');
+    const viewPort = [x, y, w, h].join(' ');
     const style: React.CSSProperties = { ...pos, ...{ borderStyle: 'solid' } };
     return (
+      <div>
       <div id='Canvas' style={style} onClick={this.handleClick}>
         <DraggableCore onDrag={this.handleDrag}>
           <svg width={'80vw'} height={'80vh'} viewBox={viewPort}>
             {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view} />)}
-            {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view} zoom={view.zoom} />)}
+            {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view} />)}
           </svg>
         </DraggableCore>
-        <ZoomControls view={view} onPlus={this.increaseZoom} onMinus={this.decreaseZoom} />
+        <ZoomControls
+          view={view}
+          onPlus={this.increaseZoom}
+          onMinus={this.decreaseZoom}
+          onZoomToFit={view.zoomToFit} />
+      </div>
+      <p>x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p>
       </div>
     );
   }
@@ -53,21 +56,22 @@ class Canvas extends React.Component<ICanvas> {
   }
 
   decreaseZoom = (view: GraphicalView) => {
-    if (view.zoom <= 0.4) {
-      view.zoom = 0.4;
+    if (view.zoom <= 0.1) {
+      view.zoom = 0.1;
     } else {
       view.zoom -= 0.1;
     }
   }
 
   handleDrag: DraggableEventHandler = (e, data) => {
-    if (!this.props.view.selection) {
-      this.props.view.layout.stop();
-      transaction(() => {
-        this.props.view.x -= data.deltaX / this.props.view.zoom;
-        this.props.view.y -= data.deltaY / this.props.view.zoom;
-      })
+    const { view } = this.props;
+    if (view.selection) {
+      view.selection = null;
     }
+    transaction(() => {
+      this.props.view.origin.x -= data.deltaX / this.props.view.zoom;
+      this.props.view.origin.y -= data.deltaY / this.props.view.zoom;
+    })
     e.stopPropagation();
   }
 
@@ -77,16 +81,19 @@ interface IZoomControls {
   view: GraphicalView;
   onPlus: (view: GraphicalView) => void;
   onMinus: (view: GraphicalView) => void;
+  onZoomToFit: () => void;
 }
 
 const ZoomControls: React.FC<IZoomControls> = (props) => {
   return (
-      <div style={{ position: "absolute", top: 0, right: 0 }}>
-        <div style={{ position: "absolute", top: 0, right: 10, fontSize: 30, fontWeight: "bold" }}
-          onClick={(e) => props.onPlus(props.view)}>+</div>
-        <div style={{ position: "absolute", top: 0, right: 60, fontSize: 30, fontWeight: "bold" }}
-          onClick={(e) => props.onMinus(props.view)}>-</div>
-      </div>
+    <div style={{ position: "absolute", top: 0, right: 0 }}>
+      <ZoomIn style={{ position: "absolute", top: 5, right: 20 }}
+        onClick={(e) => props.onPlus(props.view)} />
+      <ZoomOut style={{ position: "absolute", top: 5, right: 60 }}
+        onClick={(e) => props.onMinus(props.view)} />
+      <ZoomOutMap style={{ position: "absolute", top: 5, right: 100 }}
+        onClick={(e) => props.onZoomToFit()} />
+    </div>
   )
 }
 

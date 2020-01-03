@@ -8,7 +8,6 @@ import * as Symbols from '../symbols';
 export interface IGraphicNode {
   node: ViewNode;
   view: GraphicalView;
-  zoom: number;
 }
 
 @observer
@@ -54,8 +53,8 @@ class GraphicNode extends React.Component<IGraphicNode> {
 
   handleDrag: DraggableEventHandler = (e, data) => {
     transaction(() => {
-      this.props.node.x += data.deltaX / this.props.zoom;
-      this.props.node.y += data.deltaY / this.props.zoom;
+      this.props.node.x += data.deltaX / this.props.view.zoom;
+      this.props.node.y += data.deltaY / this.props.view.zoom;
     })
     e.stopPropagation();
   }

@@ -1,4 +1,4 @@
-import { observable, computed } from 'mobx';
+import { observable, computed, transaction } from 'mobx';
 import { Color } from 'csstype';
 import Ticker from '../tools/ticker';
 import Editor from '../editor';
@@ -36,17 +36,17 @@ export class GraphicalView {
   @observable nodes: ViewNode[] = [];
   @observable edges: ViewEdge[] = [];
   @observable selection: ViewElement | null = null;
-  origin: Position = { x: 0, y: 0 };
+  @observable origin: Position = { x: 0, y: 0 };
   size: Size = { width: 1000, height: 600 };
   @observable zoom = 1.0;
-  @observable x = this.origin.x;
-  @observable y = this.origin.y;
+  @computed get x() { return this.origin.x + (this.size.width - this.w) / 2 };
+  @computed get y() { return this.origin.y + (this.size.height - this.h) / 2 };
   @computed get w() { return this.size.width / this.zoom }
   @computed get h() { return this.size.height / this.zoom }
-  // @computed get minX() { return this.nodes.reduce((min, n) => Math.min(min, n.x), this.w/2)}
-  // @computed get maxX() { return this.nodes.reduce((max, n) => Math.max(max, n.x), 0)}
-  // @computed get minY() { return this.nodes.reduce((min, n) => Math.min(min, n.y), this.h/2)}
-  // @computed get maxY() { return this.nodes.reduce((max, n) => Math.max(max, n.y), 0)}
+  @computed get minX() { return this.nodes.reduce((min, n) => Math.min(min, n.x), this.w/2)}
+  @computed get maxX() { return this.nodes.reduce((max, n) => Math.max(max, n.x), 0)}
+  @computed get minY() { return this.nodes.reduce((min, n) => Math.min(min, n.y), this.h/2)}
+  @computed get maxY() { return this.nodes.reduce((max, n) => Math.max(max, n.y), 0)}
 
   layout = new ForceLayout(this);
   ticker = new Ticker();
@@ -73,6 +73,16 @@ export class GraphicalView {
     this.layout.stop();
     this.selection = edge;
     console.log('Selected Edge ' + edge.label)
+  }
+
+  zoomToFit = () => {
+    const desiredWidth = this.maxX - this.minX;
+    const desiredHeight = this.maxY - this.minY;
+    const desiredZoom = 0.9 * Math.min(this.size.width / desiredWidth, this.size.height / desiredHeight);
+    transaction(() => {
+      this.zoom = desiredZoom;
+      this.origin = { x: this.minX - (this.size.width - this.size.width / desiredZoom) / 2, y: this.minY - (this.size.height - this.size.height / desiredZoom) / 2 };
+    })
   }
 
 }
