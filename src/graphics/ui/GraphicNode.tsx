@@ -63,8 +63,8 @@ class GraphicNode extends React.Component<IGraphicNode> {
 
 const GraphicShape: React.FC<{ node: ViewNode, style: React.CSSProperties }> = (props) => {
   const { node } = props;
-  if (node.type) {
-    const Symbol: React.FunctionComponent<React.SVGProps<SVGSVGElement>> = Reflect.get(Symbols, node.type);
+  if (node.shape) {
+    const Symbol: React.FunctionComponent<React.SVGProps<SVGSVGElement>> = Reflect.get(Symbols, node.shape);
     if (Symbol) return <Symbol key={'shape'+node.id} x={node.x} y={node.y} width={node.width} height={node.height} style={props.style} />;
   }
   const hmargin = 0.1 * node.width;

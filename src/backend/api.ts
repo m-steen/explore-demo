@@ -35,7 +35,7 @@ class Api {
               node.id = obj.id;
               node.label = obj.name;
               node.layer = obj.meta.category;
-              node.type = obj.meta.types[0];
+              node.shape = obj.meta.types[0];
               node.width = 40;
               node.height = 30;
               view.nodes.push(node);
@@ -65,7 +65,7 @@ class Api {
               target.id = t.id;
               target.label = t.name;
               target.layer = t.meta.category;
-              target.type = t.meta.types[0];
+              target.shape = t.meta.types[0];
               target.width = 40;
               target.height = 30;
               view.nodes.push(target);
