@@ -41,8 +41,9 @@ class GraphicNode extends React.Component<IGraphicNode> {
 
   handleContextMenu = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
     e.preventDefault();
-    this.props.view.onNodeSelect(this.props.node);
-    this.props.view.onNodeContextMenu(this.props.node);
+    this.props.view.layout.stop();
+    this.props.view.selection = this.props.node;
+    this.props.view.showContextMenu = true;
     e.stopPropagation();
   }
 

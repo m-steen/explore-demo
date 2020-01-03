@@ -4,6 +4,7 @@ import Ticker from '../tools/ticker';
 import Editor from '../editor';
 import { ForceLayout } from '../layout/force-layout';
 import { Position, Size } from './graphics';
+import { Menu } from './menu';
 
 export class ViewElement {
   id: string = '';
@@ -36,6 +37,7 @@ export class GraphicalView {
   @observable nodes: ViewNode[] = [];
   @observable edges: ViewEdge[] = [];
   @observable selection: ViewElement | null = null;
+  @observable showContextMenu = false;
   @observable origin: Position = { x: 0, y: 0 };
   size: Size = { width: 1000, height: 600 };
   @observable zoom = 1.0;
@@ -55,23 +57,20 @@ export class GraphicalView {
 
   nodeColor: (node: ViewNode) => Color = (node: ViewNode) => 'lightgrey';
 
+  nodeMenu: (node: ViewNode) => Menu = (node: ViewNode) => new Menu();
+
   onNodeSelect = (node: ViewNode) => {
     this.layout.stop();
+    this.showContextMenu = false;
     this.selection = node;
     console.log('Selected Node ' + node.label)
   }
 
-  onNodeContextMenu = (node: ViewNode) => {
-    this.layout.stop();
-    this.selection = node;
-    console.log('Right mouse button clicked on ' + node.label)
-    this.editor.api.getRelationsFrom(node, this)
-      .then(() => this.layout.apply());
-  }
 
   onEdgeSelect = (edge: ViewEdge) => {
     this.layout.stop();
     this.selection = edge;
+    this.showContextMenu = false;
     console.log('Selected Edge ' + edge.label)
   }
 

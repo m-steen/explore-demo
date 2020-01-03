@@ -81,6 +81,42 @@ class Api {
         });
     }
 
+  getRelationsTo: (node: ViewNode, view: GraphicalView) => Promise<void> =
+    (target, view) => {
+      const aquery = aql`
+        FOR startObj IN Objects
+          FILTER startObj.id == ${target.id}
+          FOR v, e, p IN 1..1 INBOUND startObj
+            GRAPH 'objectRelations'
+            RETURN {source: v, relation: e, target: startObj}
+      `
+      return this.db.query(aquery)
+        .then((array) => {
+          array.each((result) => {
+            console.log(result)
+            const { source: s, relation: r } = result;
+            let source = view.nodes.find((x) => s.id === x.id);
+            if (source === undefined) {
+              source = new ViewNode();
+              source.id = s.id;
+              source.label = s.name;
+              source.layer = s.meta.category;
+              source.shape = s.meta.types[0];
+              source.width = 40;
+              source.height = 30;
+              view.nodes.push(source);
+            }
+            let edge = view.edges.find((x) => r.id === x.id);
+            if (edge === undefined) {
+              edge = new ViewEdge(source, target);
+              edge.id = r.id;
+              edge.label = r.meta.types[1].replace('Relation', '');
+              view.edges.push(edge);
+            }
+          })
+        });
+    }
+
   loadModel: (view: GraphicalView) => Promise<void> = (view: GraphicalView) => {
     view.layout.stop();
     view.edges = [];

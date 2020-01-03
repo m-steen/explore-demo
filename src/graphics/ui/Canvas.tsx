@@ -2,11 +2,12 @@ import React from 'react';
 import { transaction } from 'mobx';
 import { observer } from 'mobx-react';
 import { Size } from '../model/graphics';
-import { GraphicalView } from '../model/view-model';
+import { GraphicalView, ViewNode } from '../model/view-model';
 import GraphicNode from './GraphicNode';
 import GraphicLink from './GraphicLink';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import { ZoomIn, ZoomOut, ZoomOutMap } from '@material-ui/icons';
+import { Button, ButtonGroup } from 'react-bootstrap';
 
 export interface ICanvas {
   view: GraphicalView;
@@ -24,26 +25,28 @@ class Canvas extends React.Component<ICanvas> {
     const style: React.CSSProperties = { ...pos, ...{ borderStyle: 'solid' } };
     return (
       <div>
-      <div id='Canvas' style={style} onClick={this.handleClick} onWheel={this.onWheel}>
-        <DraggableCore onDrag={this.handleDrag}>
-          <svg width={'80vw'} height={'80vh'} viewBox={viewPort}>
-            {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view} />)}
-            {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view} />)}
-          </svg>
-        </DraggableCore>
-        <ZoomControls
-          view={view}
-          onPlus={this.increaseZoom}
-          onMinus={this.decreaseZoom}
-          onZoomToFit={view.zoomToFit} />
-      </div>
-      <p>x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p>
+        <div id='Canvas' style={style} onClick={this.handleClick} onWheel={this.onWheel}>
+          <DraggableCore onDrag={this.handleDrag}>
+            <svg width={'80vw'} height={'80vh'} viewBox={viewPort}>
+              {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view} />)}
+              {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view} />)}
+            </svg>
+          </DraggableCore>
+          <ZoomControls
+            view={view}
+            onPlus={this.increaseZoom}
+            onMinus={this.decreaseZoom}
+            onZoomToFit={view.zoomToFit} />
+          <ContextMenu view={view} />
+        </div>
+        <p>x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p>
       </div>
     );
   }
 
   handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     this.props.view.selection = null;
+    this.props.view.showContextMenu = false;
     e.stopPropagation();
   }
 
@@ -75,6 +78,7 @@ class Canvas extends React.Component<ICanvas> {
     const { view } = this.props;
     if (view.selection) {
       view.selection = null;
+      view.showContextMenu = false;
     }
     transaction(() => {
       this.props.view.origin.x -= data.deltaX / this.props.view.zoom;
@@ -104,5 +108,29 @@ const ZoomControls: React.FC<IZoomControls> = (props) => {
     </div>
   )
 }
+
+const ContextMenu: React.FC<{ view: GraphicalView }> = observer((props) => {
+  const { view } = props;
+  const node = view.selection;
+  const canvas = document.getElementById('Canvas');
+  const canvasWidth = canvas?.offsetWidth ?? view.w;
+  const canvasHeight = canvas?.offsetHeight ?? view.h;
+  const xfactor = canvasWidth / view.w;
+  const yfactor = canvasHeight / view.h;
+  if (node && view.showContextMenu && node instanceof ViewNode) {
+    const menu = view.nodeMenu(node);
+    return (
+      <ButtonGroup vertical style={{ position: 'absolute', left: (node.x + node.width + 10 - view.x) * xfactor, top: (node.y - view.y) * yfactor }}>
+        {menu.options.map((option) => {
+          return (
+            <Button key={option.label} onClick={option.action}>{option.label}</Button>
+          )
+        })}
+      </ButtonGroup>
+    );
+  } else {
+    return null;
+  }
+})
 
 export default Canvas;
