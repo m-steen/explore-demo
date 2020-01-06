@@ -20,14 +20,13 @@ class Canvas extends React.Component<ICanvas> {
   render() {
     const { view } = this.props;
     const { x, y, w, h } = view;
-    const pos: React.CSSProperties = { position: "absolute" };
     const viewPort = [x, y, w, h].join(' ');
-    const style: React.CSSProperties = { ...pos, ...{ borderStyle: 'solid' } };
+    const style: React.CSSProperties = { borderStyle: 'solid' };
     return (
-      <div>
+      <div style={{width: '100%'}}>
         <div id='Canvas' style={style} onClick={this.handleClick} onWheel={this.onWheel}>
           <DraggableCore onDrag={this.handleDrag}>
-            <svg width={'80vw'} height={'80vh'} viewBox={viewPort}>
+            <svg viewBox={viewPort}>
               {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view} />)}
               {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view} />)}
             </svg>
@@ -39,7 +38,7 @@ class Canvas extends React.Component<ICanvas> {
             onZoomToFit={view.zoomToFit} />
           <ContextMenu view={view} />
         </div>
-        <p>x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p>
+        <p> x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p>
       </div>
     );
   }
@@ -97,8 +96,14 @@ interface IZoomControls {
 }
 
 const ZoomControls: React.FC<IZoomControls> = (props) => {
+  const canvas = document.getElementById('Canvas');
+  if (!canvas) {
+    return null;
+  }
+  const offsetLeft = canvas.offsetLeft;
+  const offsetTop = canvas.offsetTop;
   return (
-    <div style={{ position: "absolute", top: 0, right: 0 }}>
+    <div style={{ position: "absolute", top: offsetTop, right: offsetLeft }}>
       <ZoomIn style={{ position: "absolute", top: 5, right: 20 }}
         onClick={(e) => props.onPlus(props.view)} />
       <ZoomOut style={{ position: "absolute", top: 5, right: 60 }}
@@ -113,6 +118,8 @@ const ContextMenu: React.FC<{ view: GraphicalView }> = observer((props) => {
   const { view } = props;
   const node = view.selection;
   const canvas = document.getElementById('Canvas');
+  const offsetLeft = canvas?.offsetLeft ?? 0;
+  const offsetTop = canvas?.offsetTop ?? 0;
   const canvasWidth = canvas?.offsetWidth ?? view.w;
   const canvasHeight = canvas?.offsetHeight ?? view.h;
   const xfactor = canvasWidth / view.w;
@@ -120,7 +127,8 @@ const ContextMenu: React.FC<{ view: GraphicalView }> = observer((props) => {
   if (node && view.showContextMenu && node instanceof ViewNode) {
     const menu = view.nodeMenu(node);
     return (
-      <ButtonGroup vertical style={{ position: 'absolute', left: (node.x + node.width + 10 - view.x) * xfactor, top: (node.y - view.y) * yfactor }}>
+      <ButtonGroup vertical 
+        style={{ position: 'absolute', left: offsetLeft + (node.x + node.width + 10 - view.x) * xfactor, top: offsetTop + (node.y - view.y) * yfactor }}>
         {menu.options.map((option) => {
           return (
             <Button key={option.label} onClick={option.action}>{option.label}</Button>
