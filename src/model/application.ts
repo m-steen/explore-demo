@@ -31,11 +31,14 @@ class Application extends Editor {
     this.view.nodeMenu = () => {
       const menu = new Menu<ViewNode>();
       const expandOutgoingAction = (node: ViewNode) => this.api.getRelationsFrom(node, this.view).then(() => this.view.layout.apply());
-      const expandOutgoing = new MenuOption('Expand outgoing', expandOutgoingAction);
+      const expandOutgoing = new MenuOption('Expand outgoing relations', expandOutgoingAction);
       menu.options.push(expandOutgoing);
       const expandIncomingAction = (node: ViewNode) => this.api.getRelationsTo(node, this.view).then(() => this.view.layout.apply());
-      const expandIncoming = new MenuOption('Expand incoming', expandIncomingAction);
+      const expandIncoming = new MenuOption('Expand incoming relations', expandIncomingAction);
       menu.options.push(expandIncoming);
+      const expandAllAction = (node: ViewNode) => this.api.getRelationsFrom(node, this.view).then(() => this.api.getRelationsFrom(node, this.view)).then(() => this.view.layout.apply());
+      const expandAll = new MenuOption('Expand all relations', expandAllAction);
+      menu.options.push(expandAll);
       const removeAction = (node: ViewNode) => node.delete();
       const removeNode = new MenuOption('Remove', removeAction);
       menu.options.push(removeNode);
