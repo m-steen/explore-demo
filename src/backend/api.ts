@@ -31,7 +31,7 @@ class Api {
             console.log(obj)
             let node = view.nodes.find((x) => obj.id === x.id);
             if (node === undefined) {
-              node = new ViewNode();
+              node = new ViewNode(view);
               node.id = obj.id;
               node.label = obj.name;
               node.layer = obj.meta.category;
@@ -61,7 +61,7 @@ class Api {
             const { relation: r, target: t } = result;
             let target = view.nodes.find((x) => t.id === x.id);
             if (target === undefined) {
-              target = new ViewNode();
+              target = new ViewNode(view);
               target.id = t.id;
               target.label = t.name;
               target.layer = t.meta.category;
@@ -72,7 +72,7 @@ class Api {
             }
             let edge = view.edges.find((x) => r.id === x.id);
             if (edge === undefined) {
-              edge = new ViewEdge(source, target);
+              edge = new ViewEdge(view, source, target);
               edge.id = r.id;
               edge.label = r.meta.types[1].replace('Relation', '');
               view.edges.push(edge);
@@ -97,7 +97,7 @@ class Api {
             const { source: s, relation: r } = result;
             let source = view.nodes.find((x) => s.id === x.id);
             if (source === undefined) {
-              source = new ViewNode();
+              source = new ViewNode(view);
               source.id = s.id;
               source.label = s.name;
               source.layer = s.meta.category;
@@ -108,7 +108,7 @@ class Api {
             }
             let edge = view.edges.find((x) => r.id === x.id);
             if (edge === undefined) {
-              edge = new ViewEdge(source, target);
+              edge = new ViewEdge(view, source, target);
               edge.id = r.id;
               edge.label = r.meta.types[1].replace('Relation', '');
               view.edges.push(edge);
@@ -118,14 +118,10 @@ class Api {
     }
 
   loadModel: (view: GraphicalView) => Promise<void> = (view: GraphicalView) => {
-    view.layout.stop();
-    view.edges = [];
-    view.nodes = [];
-    view.zoom = 1.0;
-    view.origin = { x: 0, y: 0 };
+    view.clear();
     return new Promise((resolve) => {
 
-      const n1 = new ViewNode();
+      const n1 = new ViewNode(view);
       n1.label = 'First Element';
       n1.id = uuid();
       n1.x = 300;
@@ -134,7 +130,7 @@ class Api {
       n1.height = 30;
       view.nodes.push(n1);
 
-      const n2 = new ViewNode();
+      const n2 = new ViewNode(view);
       n2.label = 'Second Element';
       n2.id = uuid();
       n2.x = 600;
@@ -143,7 +139,7 @@ class Api {
       n2.height = 30;
       view.nodes.push(n2);
 
-      const n3 = new ViewNode();
+      const n3 = new ViewNode(view);
       n3.label = 'Third Element';
       n3.id = uuid();
       n3.x = 500;
@@ -152,18 +148,17 @@ class Api {
       n3.height = 30;
       view.nodes.push(n3);
 
-      const e1 = new ViewEdge(n1, n2);
+      const e1 = new ViewEdge(view, n1, n2);
       e1.label = 'relation';
       e1.id = uuid();
       view.edges.push(e1);
 
-      const e2 = new ViewEdge(n1, n3);
+      const e2 = new ViewEdge(view, n1, n3);
       e2.label = 'relation';
       e2.id = uuid();
       view.edges.push(e2);
 
-      // simulating 1s latency in retrieving model
-      setTimeout(resolve, 1000);
+      resolve();
     });
   }
 }

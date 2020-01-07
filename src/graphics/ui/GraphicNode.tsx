@@ -1,22 +1,21 @@
 import React from 'react';
 import { DraggableEventHandler, DraggableCore } from 'react-draggable';
 import { transaction } from 'mobx';
-import { ViewNode, GraphicalView } from '../model/view-model';
+import { ViewNode } from '../model/view-model';
 import { observer } from 'mobx-react';
 import * as Symbols from '../symbols';
 
 export interface IGraphicNode {
   node: ViewNode;
-  view: GraphicalView;
 }
 
 @observer
 class GraphicNode extends React.Component<IGraphicNode> {
 
   render() {
-    const { node, view } = this.props;
-    const fillColor = view.nodeColor(node);
-    const strokeColor = this.isSelected() ? 'chartreuse' : 'grey';
+    const { node } = this.props;
+    const fillColor = node.view.nodeColor(node);
+    const strokeColor = this.isPrimarySelection() ? 'chartreuse' : this.isSelected() ? 'blue' : 'grey';
     const style: React.CSSProperties = { stroke: strokeColor, strokeWidth: 2, fill: fillColor };
     const labelPos = { x: node.x + node.width / 2, y: node.y + node.height + 15 };
     const textStyle: React.CSSProperties = { fontSize: 10, textAlign: "center" };
@@ -30,32 +29,57 @@ class GraphicNode extends React.Component<IGraphicNode> {
     );
   }
 
+  isPrimarySelection = () => {
+    const { node } = this.props;
+    const { selection } = node.view;
+    return selection.length > 0 && selection[0] === node;
+  }
+
   isSelected = () => {
-    return this.props.view.selection && this.props.view.selection.id === this.props.node.id;
+    const { node } = this.props;
+    return node.view.selection.includes(node);
   }
 
   handleClick = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
-    this.props.view.onNodeSelect(this.props.node);
+    const { node } = this.props;
+    if (!e.shiftKey) {
+      node.view.clearSelection();
+      node.view.selectElement(node);
+    } else {
+      node.view.toggleSelection(node);
+    }
     e.stopPropagation();
   }
 
   handleContextMenu = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
     e.preventDefault();
-    this.props.view.layout.stop();
-    this.props.view.selection = this.props.node;
-    this.props.view.showContextMenu = true;
+    const { node } = this.props;
+    const view = node.view;
+    if (view.selection.includes(node)) {
+      view.layout.stop();
+      if (view.contextMenuActiveFor === null) {
+        view.contextMenuActiveFor = node.id;
+      } else {
+        view.contextMenuActiveFor = null;
+      }
+    }
+    else {
+      view.clearSelection();
+      view.selectElement(node);
+      view.contextMenuActiveFor = node.id;
+    }
     e.stopPropagation();
   }
 
   handleDragStart: DraggableEventHandler = (e, data) => {
-    this.props.view.onNodeSelect(this.props.node);
     e.stopPropagation();
   }
 
   handleDrag: DraggableEventHandler = (e, data) => {
+    const { node } = this.props;
     transaction(() => {
-      this.props.node.x += data.deltaX / this.props.view.zoom;
-      this.props.node.y += data.deltaY / this.props.view.zoom;
+      node.x += data.deltaX / node.view.zoom;
+      node.y += data.deltaY / node.view.zoom;
     })
     e.stopPropagation();
   }

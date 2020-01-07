@@ -2,7 +2,7 @@ import React from 'react';
 import { transaction } from 'mobx';
 import { observer } from 'mobx-react';
 import { Size } from '../model/graphics';
-import { GraphicalView, ViewNode } from '../model/view-model';
+import { GraphicalView, ViewNode, ViewElement } from '../model/view-model';
 import GraphicNode from './GraphicNode';
 import GraphicLink from './GraphicLink';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
@@ -27,8 +27,8 @@ class Canvas extends React.Component<ICanvas> {
         <div id='Canvas' style={style} onClick={this.handleClick} onWheel={this.onWheel}>
           <DraggableCore onDrag={this.handleDrag}>
             <svg viewBox={viewPort}>
-              {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} view={view} />)}
-              {view.nodes.map((node) => <GraphicNode key={node.id} node={node} view={view} />)}
+              {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} />)}
+              {view.nodes.map((node) => <GraphicNode key={node.id} node={node} />)}
             </svg>
           </DraggableCore>
           <ZoomControls
@@ -44,8 +44,7 @@ class Canvas extends React.Component<ICanvas> {
   }
 
   handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    this.props.view.selection = null;
-    this.props.view.showContextMenu = false;
+    this.props.view.clearSelection();
     e.stopPropagation();
   }
 
@@ -75,9 +74,8 @@ class Canvas extends React.Component<ICanvas> {
 
   handleDrag: DraggableEventHandler = (e, data) => {
     const { view } = this.props;
-    if (view.selection) {
-      view.selection = null;
-      view.showContextMenu = false;
+    if (view.selection.length > 0) {
+      view.clearSelection();
     }
     transaction(() => {
       this.props.view.origin.x -= data.deltaX / this.props.view.zoom;
@@ -116,7 +114,14 @@ const ZoomControls: React.FC<IZoomControls> = (props) => {
 
 const ContextMenu: React.FC<{ view: GraphicalView }> = observer((props) => {
   const { view } = props;
-  const node = view.selection;
+  if (view.contextMenuActiveFor === null) {
+    return null;
+  }
+  const element = view.selection.find((n: ViewElement) => view.contextMenuActiveFor === n.id);
+  if (!(element instanceof ViewNode)) {
+    return null;
+  }
+  const node = element;
   const canvas = document.getElementById('Canvas');
   const offsetLeft = canvas?.offsetLeft ?? 0;
   const offsetTop = canvas?.offsetTop ?? 0;
@@ -124,21 +129,24 @@ const ContextMenu: React.FC<{ view: GraphicalView }> = observer((props) => {
   const canvasHeight = canvas?.offsetHeight ?? view.h;
   const xfactor = canvasWidth / view.w;
   const yfactor = canvasHeight / view.h;
-  if (node && view.showContextMenu && node instanceof ViewNode) {
-    const menu = view.nodeMenu(node);
-    return (
-      <ButtonGroup vertical 
-        style={{ position: 'absolute', left: offsetLeft + (node.x + node.width + 10 - view.x) * xfactor, top: offsetTop + (node.y - view.y) * yfactor }}>
-        {menu.options.map((option) => {
-          return (
-            <Button key={option.label} onClick={option.action}>{option.label}</Button>
-          )
-        })}
-      </ButtonGroup>
-    );
-  } else {
-    return null;
-  }
+  const nodeMenu = view.nodeMenu();
+  const options = nodeMenu.options.map((option) => {
+    const action = () => view.selection
+      .filter((n) => n instanceof ViewNode)
+      .map((n) => n as ViewNode)
+      .forEach((n: ViewNode) => option.action(n))
+    return { label:option.label, action: action };
+  })
+  return (
+    <ButtonGroup vertical
+      style={{ position: 'absolute', left: offsetLeft + (node.x + node.width + 10 - view.x) * xfactor, top: offsetTop + (node.y - view.y) * yfactor }}>
+      {options.map((option) => {
+        return (
+          <Button key={option.label} onClick={option.action}>{option.label}</Button>
+        )
+      })}
+    </ButtonGroup>
+  );
 })
 
 export default Canvas;

@@ -27,6 +27,7 @@ class App extends React.Component {
         </Row>
         <Row>
           <ButtonToolbar className="p-1">
+            <ButtonControl label={'Clear'} command={this.onClear} />
             <ButtonControl label={'Load'} command={this.onLoad} />
             <ButtonControl label={'Layout'} command={this.onLayout} />
             <InputGroup>
@@ -41,6 +42,11 @@ class App extends React.Component {
       </Container>
     );
   }
+
+  onClear: Command = () => new Promise((resolve) => {
+    this.appState.view.clear();
+    resolve();
+  });
 
   onLoad: Command = () => this.appState.api.loadModel(this.appState.view);
 

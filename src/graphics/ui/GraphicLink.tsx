@@ -1,18 +1,18 @@
 import React from 'react';
-import { ViewEdge, GraphicalView } from '../model/view-model';
+import { ViewEdge } from '../model/view-model';
 import { observer } from 'mobx-react';
 
 export interface IGraphicLink {
   edge: ViewEdge;
-  view: GraphicalView;
 }
 
 @observer
 class GraphicLink extends React.Component<IGraphicLink> {
 
   render() {
-    const { source, target } = this.props.edge;
-    const strokeColor = this.isSelected() ? 'chartreuse' : 'lightgrey';
+    const { edge } = this.props;
+    const { source, target } = edge;
+    const strokeColor = this.isPrimarySelection() ? 'chartreuse' : this.isSelected() ? 'blue' : 'lightgrey';
     const style: React.CSSProperties = { stroke: strokeColor, strokeWidth: 2 };
     let [x1, y1] = [source.x + source.width / 2, source.y + source.height / 2]
     let [x2, y2] = [target.x + target.width / 2, target.y + target.height / 2]
@@ -23,13 +23,26 @@ class GraphicLink extends React.Component<IGraphicLink> {
       <text x={labelPos.x} y={labelPos.y} style={textStyle}>{this.props.edge.label}</text>
       </g>
   }
-    
+
+  isPrimarySelection = () => {
+    const { edge } = this.props;
+    const { selection } = edge.view;
+    return selection.length > 0 && selection[0] === edge;
+  }
+
   isSelected = () => {
-    return this.props.view.selection && this.props.view.selection.id === this.props.edge.id;
+    const { edge } = this.props;
+    return edge.view.selection.includes(edge);
   }
 
   handleClick = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
-    this.props.view.onEdgeSelect(this.props.edge);
+    const { edge } = this.props;
+    if (!e.shiftKey) {
+      edge.view.clearSelection();
+      edge.view.selectElement(edge);
+    } else {
+      edge.view.toggleSelection(edge);
+    }
     e.stopPropagation();
   }
 
