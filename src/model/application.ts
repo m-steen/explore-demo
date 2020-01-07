@@ -36,7 +36,7 @@ class Application extends Editor {
       const expandIncomingAction = (node: ViewNode) => this.api.getRelationsTo(node, this.view).then(() => this.view.layout.apply());
       const expandIncoming = new MenuOption('Expand incoming relations', expandIncomingAction);
       menu.options.push(expandIncoming);
-      const expandAllAction = (node: ViewNode) => this.api.getRelationsFrom(node, this.view).then(() => this.api.getRelationsFrom(node, this.view)).then(() => this.view.layout.apply());
+      const expandAllAction = (node: ViewNode) => this.api.getRelationsFrom(node, this.view).then(() => this.api.getRelationsTo(node, this.view)).then(() => this.view.layout.apply());
       const expandAll = new MenuOption('Expand all relations', expandAllAction);
       menu.options.push(expandAll);
       const removeAction = (node: ViewNode) => node.delete();
