@@ -1,9 +1,8 @@
-import { observable, computed, transaction } from 'mobx';
+import { observable, computed, action } from 'mobx';
 import { Color } from 'csstype';
 import Ticker from '../tools/ticker';
 import Editor from '../editor';
 import { ForceLayout } from '../layout/force-layout';
-import { Position, Size } from './graphics';
 import { Menu } from './menu';
 
 export class ViewElement {
@@ -34,6 +33,15 @@ export class ViewNode extends ViewElement {
     }
   }
 
+  @computed get isPrimarySelection() {
+    const { selection } = this.view;
+    return selection.length > 0 && selection[0] === this;
+  }
+
+  @computed get isSelected() {
+    return this.view.selection.includes(this);
+  }
+
 }
 
 export class ViewEdge extends ViewElement {
@@ -60,18 +68,16 @@ export class GraphicalView {
   @observable selection: ViewElement[] = [];
   @observable contextMenuActiveFor: string | null = null;
 
-  @observable origin: Position = { x: 0, y: 0 };
-  size: Size = { width: 1000, height: 600 };
-  @observable zoom = 1.0;
+  @observable x = 0;
+  @observable y = 0;
+  @observable w = 1140;
+  @computed get h() { return this.w / 16 * 9 }
+  @computed get zoom() { return 1140 / this.w }
 
-  @computed get x() { return this.origin.x + (this.size.width - this.w) / 2 };
-  @computed get y() { return this.origin.y + (this.size.height - this.h) / 2 };
-  @computed get w() { return this.size.width / this.zoom }
-  @computed get h() { return this.size.height / this.zoom }
   @computed get minX() { return this.nodes.reduce((min, n) => Math.min(min, n.x), this.w/2)}
-  @computed get maxX() { return this.nodes.reduce((max, n) => Math.max(max, n.x), 0)}
+  @computed get maxX() { return this.nodes.reduce((max, n) => Math.max(max, n.x + n.width), 0)}
   @computed get minY() { return this.nodes.reduce((min, n) => Math.min(min, n.y), this.h/2)}
-  @computed get maxY() { return this.nodes.reduce((max, n) => Math.max(max, n.y), 0)}
+  @computed get maxY() { return this.nodes.reduce((max, n) => Math.max(max, n.y + n.height), 0)}
 
   layout = new ForceLayout(this);
   ticker = new Ticker();
@@ -82,6 +88,7 @@ export class GraphicalView {
 
   nodeMenu: () => Menu<ViewNode> = () => new Menu();
 
+  @action
   clearSelection = () => {
     this.contextMenuActiveFor = null;
     this.selection = [];
@@ -92,13 +99,15 @@ export class GraphicalView {
     this.clearSelection();
     this.edges = [];
     this.nodes = [];
-    this.origin = { x: 0, y: 0 };
-    this.zoom = 1.0;
+    this.x = 0;
+    this.y = 0;
+    this.w = 1140;
   }
 
+  @action
   selectElement = (element: ViewElement) => {
     this.selection.push(element);
-    console.log('Selected Element ' + element.label)
+    console.log('Selected ' + element.label)
   }
 
   toggleSelection = (element: ViewElement) => {
@@ -106,19 +115,15 @@ export class GraphicalView {
       this.selection.splice(this.selection.indexOf(element), 1);
     } else {
       this.selection.push(element);
-      console.log('Selected Element ' + element.label)
+      console.log('Selected ' + element.label)
     }
   }
 
   zoomToFit = () => {
-    const desiredWidth = this.maxX - this.minX;
-    const desiredHeight = this.maxY - this.minY;
-    if (desiredWidth > 0 && desiredHeight > 0) {
-      const desiredZoom = 0.9 * Math.min(this.size.width / desiredWidth, this.size.height / desiredHeight);
-      transaction(() => {
-        this.zoom = desiredZoom;
-        this.origin = { x: this.minX - (this.size.width - this.size.width / desiredZoom) / 2, y: this.minY - (this.size.height - this.size.height / desiredZoom) / 2 };
-      })
+    if (this.maxX - this.minX > 0) {
+      this.x = this.minX - 20;
+      this.y = this.minY - 20;
+      this.w = Math.max(this.maxX - this.minX, (this.maxY - this.minY) * 16 / 9) + 40;
     }
   }
 

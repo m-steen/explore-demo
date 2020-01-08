@@ -24,7 +24,7 @@ class Application extends Editor {
 
     this.view.nodeColor = (node: ViewNode) => {
       const color = colorScheme.get(node.layer);
-      if (color === undefined) { return ''; }
+      if (color === undefined) { return 'white'; }
       return color;
     }
 

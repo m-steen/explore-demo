@@ -37,7 +37,7 @@ class App extends React.Component {
           </ButtonToolbar>
         </Row>
         <Row>
-          <Canvas view={view} size={{ width: 1000, height: 600 }} />
+          <Canvas view={view} />
         </Row>
       </Container>
     );
