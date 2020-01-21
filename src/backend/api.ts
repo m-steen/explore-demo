@@ -117,6 +117,52 @@ class Api {
         });
     }
 
+    loadAll: (view: GraphicalView) => Promise<void> =
+    (view) => {
+      const aquery = aql`
+      FOR v IN Objects
+        FOR v1, e, p IN 1..1 OUTBOUND v
+        GRAPH 'objectRelations'
+          RETURN {source: v, relation: e, target: v1}
+      `
+      console.log(aquery)
+      return this.db.query(aquery)
+        .then((array) => {
+          array.each((result) => {
+            const { source: s, relation: r, target: t } = result;
+            let source = view.nodes.find((x) => s.id === x.id);
+            if (source === undefined) {
+              source = new ViewNode(view);
+              source.id = s.id;
+              source.label = s.name;
+              source.layer = s.meta.category;
+              source.shape = s.meta.types[0];
+              source.width = 40;
+              source.height = 30;
+              view.nodes.push(source);
+            }
+            let target = view.nodes.find((x) => t.id === x.id);
+            if (target === undefined) {
+              target = new ViewNode(view);
+              target.id = t.id;
+              target.label = t.name;
+              target.layer = t.meta.category;
+              target.shape = t.meta.types[0];
+              target.width = 40;
+              target.height = 30;
+              view.nodes.push(target);
+            }
+            let edge = view.edges.find((x) => r.id === x.id);
+            if (edge === undefined) {
+              edge = new ViewEdge(view, source, target);
+              edge.id = r.id;
+              edge.label = r.meta.types[1].replace('Relation', '');
+              view.edges.push(edge);
+            }
+          })
+        });
+    }
+
   loadModel: (view: GraphicalView) => Promise<void> = (view: GraphicalView) => {
     view.clear();
     return new Promise((resolve) => {

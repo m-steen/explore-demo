@@ -48,7 +48,10 @@ class App extends React.Component {
     resolve();
   });
 
-  onLoad: Command = () => this.appState.api.loadModel(this.appState.view);
+  onLoad: Command = () => {
+    return this.appState.api.loadAll(this.appState.view)
+    .then(() => this.appState.view.layout.apply());
+  }
 
   onLayout: Command = () => this.appState.view.layout.apply();
 
