@@ -123,6 +123,7 @@ class App extends React.Component {
   }
 
   onQuerySubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     const query = this.appState.query;
     const filter = this.appState.filter;
     const view = this.appState.view;
@@ -148,6 +149,7 @@ class App extends React.Component {
   }
 
   onApplyFilter = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     const filter = this.appState.filter;
     if (filter.length === 0) {
       return;
