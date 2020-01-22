@@ -14,16 +14,35 @@ class Api {
     })
   }
 
-  getObjects: (query: string, view: GraphicalView) => Promise<void> =
-    (query, view) => {
+  getObjects: (query: string, filter: string[], view: GraphicalView) => Promise<void> =
+    (query, filter, view) => {
       view.layout.stop();
-      view.nodes = [];
-      view.edges = [];
-      console.log(query)
-      const aquery = aql`
+      // view.nodes = [];
+      // view.edges = [];
+      let aquery = aql`
+        FOR obj IN FULLTEXT("Objects", "name", ${query})
+        FILTER obj.meta.category IN ${filter}
+        RETURN obj
+      `;
+      if (query.length === 0) {
+        if (filter.length === 0) {
+          aquery = aql`
+          FOR obj IN Objects
+          RETURN obj
+        `;
+        } else {
+          aquery = aql`
+          FOR obj IN Objects
+          FILTER obj.meta.category IN ${filter}
+          RETURN obj
+        `;
+        }
+      } else if (filter.length === 0) {
+        aquery = aql`
         FOR obj IN FULLTEXT("Objects", "name", ${query})
         RETURN obj
-      `
+      `;
+      }
       console.log(aquery)
       return this.db.query(aquery)
         .then((array) => {

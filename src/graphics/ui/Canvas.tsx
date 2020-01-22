@@ -20,11 +20,27 @@ class Canvas extends React.Component<ICanvas> {
   @observable lassoToolOrigin = { x: 0, y: 0 };
   @observable lassoToolMaxim = { x: 0, y: 0 };
 
+  componentDidMount() {
+    const { view } = this.props;
+    view.absoluteX = calculateOffset(this.canvas, 'offsetLeft');
+    view.absoluteY = calculateOffset(this.canvas, 'offsetTop');
+    view.absoluteW = this.canvas?.offsetWidth ?? view.absoluteW;
+    view.absoluteH = this.canvas?.offsetHeight ?? view.absoluteH;
+  }
+
+  componentDidUpdate() {
+    const { view } = this.props;
+    view.absoluteX = calculateOffset(this.canvas, 'offsetLeft');
+    view.absoluteY = calculateOffset(this.canvas, 'offsetTop');
+    view.absoluteW = this.canvas?.offsetWidth ?? view.absoluteW;
+    view.absoluteH = this.canvas?.offsetHeight ?? view.absoluteH;
+  }
+
   render() {
     const { view } = this.props;
     const { x, y, w, h } = view;
     const viewPort = [x, y, w, h].join(' ');
-    const style: React.CSSProperties = { borderStyle: 'solid' };
+    const style: React.CSSProperties = { };
     return (
       <div style={{ width: '100%' }}>
         <div id='Canvas' ref={ref => this.canvas = ref} style={style}
@@ -38,13 +54,13 @@ class Canvas extends React.Component<ICanvas> {
             </svg>
           </DraggableCore>
           <ZoomControls
-            view={view} left={this.canvas ? this.canvas.offsetLeft + this.canvas.offsetWidth : 0} top={this.canvas?.offsetTop ?? 0}
+            view={view}
             onPlus={this.increaseZoom}
             onMinus={this.decreaseZoom}
             onZoomToFit={view.zoomToFit} />
-          <ContextMenu view={view} canvas={this.canvas  } />
+          <ContextMenu view={view} canvas={this.canvas} />
         </div>
-        <p> x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p>
+        {/* <p> x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p> */}
       </div>
     );
   }
@@ -62,33 +78,33 @@ class Canvas extends React.Component<ICanvas> {
   onWheel = (e: React.WheelEvent) => {
     if (e.altKey) {
       const { view } = this.props;
-      const zoomfactor = e.deltaY / 200;
-      view.x -= zoomfactor * 16;
-      view.y -= zoomfactor * 9;
-      view.w += zoomfactor * 32;
+      const zoomfactor = e.deltaY / 30;
+      view.x -= zoomfactor * 4;
+      view.y -= zoomfactor * 3;
+      view.w += zoomfactor * 8;
     } else {
-      this.props.view.y += e.deltaY / 10;
+      this.props.view.y += e.deltaY / 5;
     }
   }
 
   increaseZoom = (view: GraphicalView) => {
-    view.x += 16;
-    view.y += 9;
-    view.w -= 32;
+    view.x += 40;
+    view.y += 30;
+    view.w -= 80;
   }
 
   decreaseZoom = (view: GraphicalView) => {
-    view.x -= 16;
-    view.y -= 9;
-    view.w += 32;
+    view.x -= 40;
+    view.y -= 30;
+    view.w += 80;
   }
 
   handleDragStart: DraggableEventHandler = (e, data) => {
     if (e.shiftKey) {
       const { view } = this.props;
       view.clearSelection();
-      const offsetLeft = this.canvas?.offsetLeft ?? 0;
-      const offsetTop = this.canvas?.offsetTop ?? 0;
+      const offsetLeft = view.absoluteX // calculateOffset(this.canvas, 'offsetLeft');
+      const offsetTop = view.absoluteY // calculateOffset(this.canvas, 'offsetTop');
       const x = (data.x - offsetLeft) / view.zoom + view.x;
       const y = (data.y - offsetTop) / view.zoom + view.y;
       this.lassoToolOrigin = { x, y };
@@ -134,8 +150,8 @@ class Canvas extends React.Component<ICanvas> {
 
 interface IZoomControls {
   view: GraphicalView;
-  left: number;
-  top: number;
+  // left: number;
+  // top: number;
   onPlus: (view: GraphicalView) => void;
   onMinus: (view: GraphicalView) => void;
   onZoomToFit: () => void;
@@ -143,7 +159,7 @@ interface IZoomControls {
 
 const ZoomControls: React.FC<IZoomControls> = observer((props) => {
   return (
-    <div style={{ position: "absolute", top: props.top, left: props.left }}>
+    <div style={{ position: "absolute", top: 0, right: 0 }}>
       <ZoomIn style={{ position: "absolute", top: 5, right: 20 }}
         onClick={(e) => props.onPlus(props.view)} />
       <ZoomOut style={{ position: "absolute", top: 5, right: 60 }}
@@ -164,11 +180,8 @@ const ContextMenu: React.FC<{ view: GraphicalView, canvas: HTMLDivElement | null
     return null;
   }
   const node = element;
-  const { canvas } = props;
-  const offsetLeft = canvas?.offsetLeft ?? 0;
-  const offsetTop = canvas?.offsetTop ?? 0;
-  const x = offsetLeft + (node.x + node.width + 10 - view.x) * view.zoom;
-  const y = offsetTop + (node.y - view.y) * view.zoom;
+  const x = (node.x + node.width + 10 - view.x) * view.zoom;
+  const y = (node.y - view.y) * view.zoom;
 
   const nodeMenu = view.nodeMenu();
   const options = nodeMenu.options.map((option) => {
@@ -201,5 +214,30 @@ const LassoTool: React.FC<{ view: GraphicalView, active: boolean, origin: Positi
 
     return <rect x={x} y={y} width={w} height={h} style={style} />
 })
+
+const calculateOffset: (element: HTMLElement | null, offset: string) => number =
+  (element, offset) => {
+    if (element && element instanceof HTMLElement) {
+      let currentOffset = 0;
+      switch (offset) {
+        case 'offsetTop': {
+          currentOffset = element.offsetTop;
+          break;
+        }
+        case 'offsetLeft': {
+          currentOffset = element.offsetLeft;
+          break;
+        }
+      }
+      const parent = element.offsetParent;
+      if (parent && parent instanceof HTMLElement) {
+        return calculateOffset(parent, offset) + currentOffset;
+      } else {
+        return currentOffset;
+      }
+    } else {
+      return 0;
+    }
+  }
 
 export default Canvas;

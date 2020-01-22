@@ -10,13 +10,14 @@ const colorScheme: Map<string, string> = new Map([
   ['Strategy', '#FFC685'],
   ['Motivation', '#D7CFFF'],
   ['IM', '#FFBDDC'],
-  ['None', '#D6F8B8'],
   ['', '#D6F8B8'],
 ]);
 
 class Application extends Editor {
   @observable title: string = '';
   @observable query: string = '';
+  layers = Array.from(colorScheme.keys()).filter((key) => key.length > 0);
+  @observable filter: string[] = [];
 
   constructor(title: string = '') {
     super();

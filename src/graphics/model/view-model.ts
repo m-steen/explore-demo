@@ -68,11 +68,15 @@ export class GraphicalView {
   @observable selection: ViewElement[] = [];
   @observable contextMenuActiveFor: string | null = null;
 
-  @observable x = 0;
-  @observable y = 0;
-  @observable w = 1140;
-  @computed get h() { return this.w / 16 * 9 }
-  @computed get zoom() { return 1140 / this.w }
+  @observable absoluteX = 0;
+  @observable absoluteY = 0;
+  @observable absoluteW = 1140;
+  @observable absoluteH = this.absoluteW / 4 * 3;
+  @observable x = this.absoluteX;
+  @observable y = this.absoluteY;
+  @observable w = this.absoluteW;
+  @computed get h() { return this.w / 4 * 3 }
+  @computed get zoom() { return this.absoluteW / this.w }
 
   @computed get minX() { return this.nodes.reduce((min, n) => Math.min(min, n.x), this.w/2)}
   @computed get maxX() { return this.nodes.reduce((max, n) => Math.max(max, n.x + n.width), 0)}
@@ -123,7 +127,7 @@ export class GraphicalView {
     if (this.maxX - this.minX > 0) {
       this.x = this.minX - 20;
       this.y = this.minY - 20;
-      this.w = Math.max(this.maxX - this.minX, (this.maxY - this.minY) * 16 / 9) + 40;
+      this.w = Math.max(this.maxX - this.minX, (this.maxY - this.minY) * 4 / 3) + 40;
     }
   }
 
