@@ -23,7 +23,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "storybook": "start-storybook -p 9009 -s public",
+    "build-storybook": "build-storybook -s public"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -41,6 +43,14 @@
     ]
   },
   "devDependencies": {
+    "@storybook/addon-actions": "^5.3.8",
+    "@storybook/addon-docs": "^5.3.8",
+    "@storybook/addon-info": "^5.3.8",
+    "@storybook/addon-knobs": "^5.3.8",
+    "@storybook/addon-links": "^5.3.8",
+    "@storybook/addons": "^5.3.8",
+    "@storybook/preset-create-react-app": "^1.5.2",
+    "@storybook/react": "^5.3.8",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
