@@ -1,4 +1,5 @@
 import { ViewElement } from "./view-model";
+import { Command } from "../../components/CommandButton";
 
 export class Menu<E extends ViewElement> {
   active = false;
@@ -7,9 +8,9 @@ export class Menu<E extends ViewElement> {
 
 export class MenuOption<E extends ViewElement> {
   label: string = 'Option';
-  action: (element: E) => void;
+  action: Command;
 
-  constructor(label: string, action: (element: E) => void) {
+  constructor(label: string, action: Command) {
     this.label = label;
     this.action = action;
   }

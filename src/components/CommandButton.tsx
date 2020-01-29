@@ -1,19 +1,20 @@
 import React from 'react';
 import { observer } from 'mobx-react';
 import { observable, action } from 'mobx';
-import { Button } from 'react-bootstrap';
+import { Button, ButtonProps } from 'react-bootstrap';
 
-export type Command = () => Promise<void>;
+export type Command = (element?: any) => Promise<void>;
 
 const noop = () => {};
 
-interface IButton {
+export interface ICommandButton extends ButtonProps {
   label: string;
   command: Command;
+  className?: string;
 }
 
 @observer
-export class ButtonControl extends React.Component<IButton> {
+export class CommandButton extends React.Component<ICommandButton> {
   @observable isActive: boolean = false;
 
   @action
@@ -22,9 +23,11 @@ export class ButtonControl extends React.Component<IButton> {
   }
 
   render() {
+    const variant = this.props.variant ?? 'primary';
+    const className = this.props.className ?? 'mr-1';
     return (
-      <Button className="mr-1"
-        variant="primary"
+      <Button className={className}
+        variant={variant}
         disabled={this.isActive}
         onClick={!this.isActive ? this.handleClick : noop}
       >

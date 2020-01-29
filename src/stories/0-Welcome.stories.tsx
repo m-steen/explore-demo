@@ -7,8 +7,8 @@ export default {
   component: Welcome
 };
 
-export const ToStorybook = () => <Welcome showApp={linkTo('Button')}>Hello Typescript</Welcome>
+// export const ToStorybook = () => <Welcome showApp={linkTo('Button')}>Hello Typescript</Welcome>
 
-ToStorybook.story = {
-  name: 'to Storybook',
-};
+// ToStorybook.story = {
+//   name: 'to Storybook',
+// };

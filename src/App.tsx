@@ -1,13 +1,14 @@
 import React from 'react';
-import { Container, Row, InputGroup, Col, ButtonGroup, Tabs, Tab, Button, Navbar, Nav, Form } from 'react-bootstrap';
+import { Container, Row, InputGroup, Col, ButtonGroup, Tabs, Tab, Button, Form } from 'react-bootstrap';
 import "bootstrap/dist/css/bootstrap.min.css";
 import { observer } from 'mobx-react';
 import Select, { ActionMeta, ValueType } from 'react-select';
 import './App.css';
 import Application from './model/application';
 import Canvas from './graphics/ui/Canvas';
-import { ButtonControl, Command } from './graphics/ui/editor-controls';
 import { ViewNode, GraphicalView } from './graphics/model/view-model';
+import { TitleBar } from './components/TitleBar';
+import { CommandButton, Command } from './components/CommandButton';
 
 
 @observer
@@ -25,16 +26,12 @@ class App extends React.Component {
     const filterOptions = this.appState.layers.map((layer) => ({ value: layer, label: layer }));
     const activeFilter = this.appState.filter.map((layer) => ({ value: layer, label: layer }));
     return (
-      <Container style={{ width: '100%' }}>
+      <Container fluid>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
-          <Navbar bg='secondary' style={{width: '100%'}}>
-            <Navbar.Brand>{title}</Navbar.Brand>
-            <Nav className="mr-auto"></Nav>
-            <Nav>
-              <ButtonControl label={'Share'} command={this.onLayout} />
-              <ButtonControl label={'Save'} command={this.onLayout} />
-            </Nav>
-          </Navbar>
+          <TitleBar title={title} menuItems={[
+            { label: 'Share', command: this.onLayout },
+            { label: 'Save', command: this.onLayout },
+          ]} />
         </Row>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
           <Col md={4} style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
@@ -82,9 +79,9 @@ class App extends React.Component {
               </Tab>
               <Tab eventKey='more' title='More'>
                 <ButtonGroup vertical>
-                  <ButtonControl label={'Clear'} command={this.onClear} />
-                  <ButtonControl label={'Load All'} command={this.onLoad} />
-                  <ButtonControl label={'Layout'} command={this.onLayout} />
+                  <CommandButton label={'Clear'} command={this.onClear} />
+                  <CommandButton label={'Load All'} command={this.onLoad} />
+                  <CommandButton label={'Layout'} command={this.onLayout} />
                 </ButtonGroup>
               </Tab>
             </Tabs>
@@ -168,7 +165,8 @@ const ExpandMenu: React.FC<{view: GraphicalView}> = observer((props) => {
     const action = () => props.view.selection
       .filter((n) => n instanceof ViewNode)
       .map((n) => n as ViewNode)
-      .forEach((n: ViewNode) => option.action(n))
+      .map((n: ViewNode) => option.action(n))
+      .reduce((p, f) => p.then(() => f), Promise.resolve());
     return { label:option.label, action: action };
   })
   if (props.view.selection.length > 0) {
@@ -176,7 +174,7 @@ const ExpandMenu: React.FC<{view: GraphicalView}> = observer((props) => {
       <ButtonGroup vertical>
         {options.map((option) => {
           return (
-            <Button key={option.label} onClick={option.action}>{option.label}</Button>
+            <CommandButton key={option.label} command={option.action} label={option.label} />
           )
         })}
       </ButtonGroup>
