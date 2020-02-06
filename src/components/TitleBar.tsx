@@ -17,7 +17,7 @@ export const TitleBar: React.FC<ITitleBar> = observer((props) => {
       <Nav className="mr-auto"></Nav>
       <Nav>
         {props.menuItems.map((item) => 
-          <CommandButton label={item.label} command={item.command}/>)}
+          <CommandButton key={item.label} label={item.label} command={item.command}/>)}
       </Nav>
     </Navbar>
   );

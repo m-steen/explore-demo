@@ -1,48 +1,32 @@
 import { Database, aql } from 'arangojs';
 import { v4 as uuid } from 'uuid';
 import { GraphicalView, ViewNode, ViewEdge } from '../graphics/model/view-model';
+import { Filter } from '../model/application';
 
 class Api {
-  url: string = 'http://bdd-2016-05.bizzdesign.nl:8529';
+  url: string = 'http://localhost:8529';
   username: string = 'root';
-  password: string = '';
+  password: string = 'openSesame';
   db: Database;
 
   constructor() {
     this.db = new Database({
       url: this.url,
-    })
+    });
+    this.db.useBasicAuth(this.username, this.password);
   }
 
-  getObjects: (query: string, filter: string[], view: GraphicalView) => Promise<void> =
+  getObjects: (query: string, filter: Filter, view: GraphicalView) => Promise<void> =
     (query, filter, view) => {
       view.layout.stop();
-      // view.nodes = [];
-      // view.edges = [];
-      let aquery = aql`
-        FOR obj IN FULLTEXT("Objects", "name", ${query})
-        FILTER obj.meta.category IN ${filter}
-        RETURN obj
-      `;
-      if (query.length === 0) {
-        if (filter.length === 0) {
-          aquery = aql`
-          FOR obj IN Objects
-          RETURN obj
-        `;
-        } else {
-          aquery = aql`
-          FOR obj IN Objects
-          FILTER obj.meta.category IN ${filter}
-          RETURN obj
-        `;
-        }
-      } else if (filter.length === 0) {
-        aquery = aql`
-        FOR obj IN FULLTEXT("Objects", "name", ${query})
-        RETURN obj
-      `;
-      }
+      const iteratorPart = query.length === 0 ? aql`FOR obj IN Objects` : aql`FOR obj IN FULLTEXT("Objects", "name", ${query})`;
+      const layerFilter = filter.layers.length > 0 ? aql`FILTER obj.meta.category IN ${filter.layers}` : aql``;
+      const typeFilter = filter.types.length > 0 ? aql`FILTER obj.meta.types[0] IN ${filter.types}` : aql``;
+      const aquery = aql`
+        ${iteratorPart}
+        ${layerFilter}
+        ${typeFilter}
+        RETURN obj`;
       console.log(aquery)
       return this.db.query(aquery)
         .then((array) => {
@@ -54,23 +38,27 @@ class Api {
               node.id = obj.id;
               node.label = obj.name;
               node.layer = obj.meta.category;
+              node.type = obj.meta.types[0];
               node.shape = obj.meta.types[0];
               node.width = 40;
               node.height = 30;
               view.nodes.push(node);
+              view.selection.push(node);
             }
           })
         });
     }
 
-  getRelationsFrom: (node: ViewNode, view: GraphicalView) => Promise<void> =
-    (source, view) => {
+  getRelationsFrom: (node: ViewNode, filter: Filter, view: GraphicalView) => Promise<void> =
+    (source, filter, view) => {
+      const relationFilter = filter.relations.length > 0 ? aql`FILTER e.meta.types[1] IN ${filter.relations}` : aql``;
+      const typeFilter = filter.types.length > 0 ? aql`FILTER v.meta.types[0] IN ${filter.types}` : aql``;
       const aquery = aql`
-        FOR startObj IN Objects
-          FILTER startObj.id == ${source.id}
-          FOR v, e, p IN 1..1 OUTBOUND startObj
-            GRAPH 'objectRelations'
-            RETURN {source: startObj, relation: e, target: v}
+        FOR v, e, p IN 1..1 OUTBOUND ${'Objects/' + source.id}
+        GRAPH "objectRelations"
+        ${relationFilter}
+        ${typeFilter}
+        RETURN {source: DOCUMENT(${'Objects/' + source.id}), relation: e, target: v}
       `
       console.log(aquery)
       return this.db.query(aquery)
@@ -84,30 +72,35 @@ class Api {
               target.id = t.id;
               target.label = t.name;
               target.layer = t.meta.category;
+              target.type = t.meta.types[0]
               target.shape = t.meta.types[0];
               target.width = 40;
               target.height = 30;
               view.nodes.push(target);
+              view.selection.push(target);
             }
             let edge = view.edges.find((x) => r.id === x.id);
             if (edge === undefined) {
               edge = new ViewEdge(view, source, target);
               edge.id = r.id;
               edge.label = r.meta.types[1].replace('Relation', '');
+              edge.type = r.meta.types[1];
               view.edges.push(edge);
             }
           })
         });
     }
 
-  getRelationsTo: (node: ViewNode, view: GraphicalView) => Promise<void> =
-    (target, view) => {
+  getRelationsTo: (node: ViewNode, filter: Filter, view: GraphicalView) => Promise<void> =
+    (target, filter, view) => {
+      const relationFilter = filter.relations.length > 0 ? aql`FILTER e.meta.types[1] IN ${filter.relations}` : aql``;
+      const typeFilter = filter.types.length > 0 ? aql`FILTER v.meta.types[0] IN ${filter.types}` : aql``;
       const aquery = aql`
-        FOR startObj IN Objects
-          FILTER startObj.id == ${target.id}
-          FOR v, e, p IN 1..1 INBOUND startObj
-            GRAPH 'objectRelations'
-            RETURN {source: v, relation: e, target: startObj}
+        FOR v, e, p IN 1..1 INBOUND ${'Objects/' + target.id}
+        GRAPH "objectRelations"
+        ${relationFilter}
+        ${typeFilter}
+        RETURN {source: v, relation: e, target: DOCUMENT(${'Objects/' + target.id})}
       `
       return this.db.query(aquery)
         .then((array) => {
@@ -120,20 +113,35 @@ class Api {
               source.id = s.id;
               source.label = s.name;
               source.layer = s.meta.category;
+              source.type = s.meta.types[0];
               source.shape = s.meta.types[0];
               source.width = 40;
               source.height = 30;
               view.nodes.push(source);
+              view.selection.push(source);
             }
             let edge = view.edges.find((x) => r.id === x.id);
             if (edge === undefined) {
               edge = new ViewEdge(view, source, target);
               edge.id = r.id;
               edge.label = r.meta.types[1].replace('Relation', '');
+              edge.type = r.meta.types[1];
               view.edges.push(edge);
             }
           })
         });
+    }
+
+    expandRelations: (node: ViewNode, filter: Filter, view: GraphicalView) => Promise<void> =
+    (node, filter, view) => {
+      let promise: Promise<void> = Promise.resolve();
+      if (filter.outgoing) {
+        promise = this.getRelationsFrom(node, filter, view);
+      }
+      if (filter.incoming) {
+        promise = promise.then(() => this.getRelationsTo(node, filter, view));
+      }
+      return promise;
     }
 
     loadAll: (view: GraphicalView) => Promise<void> =
@@ -155,6 +163,7 @@ class Api {
               source.id = s.id;
               source.label = s.name;
               source.layer = s.meta.category;
+              source.type = s.meta.types[0];
               source.shape = s.meta.types[0];
               source.width = 40;
               source.height = 30;
@@ -166,6 +175,7 @@ class Api {
               target.id = t.id;
               target.label = t.name;
               target.layer = t.meta.category;
+              target.type = t.meta.types[0];
               target.shape = t.meta.types[0];
               target.width = 40;
               target.height = 30;
@@ -176,6 +186,7 @@ class Api {
               edge = new ViewEdge(view, source, target);
               edge.id = r.id;
               edge.label = r.meta.types[1].replace('Relation', '');
+              edge.type = r.meta.types[1];
               view.edges.push(edge);
             }
           })

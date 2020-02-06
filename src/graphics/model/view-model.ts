@@ -8,6 +8,7 @@ import { Menu } from './menu';
 export class ViewElement {
   id: string = '';
   label: string = '';
+  type: string = '';
   view: GraphicalView;
 
   constructor(view: GraphicalView) {
@@ -27,8 +28,11 @@ export class ViewNode extends ViewElement {
   delete = () => {
     if (this.view.nodes.includes(this)) {
       this.view.edges.filter((edge) => edge.source === this || edge.target === this)
-        .forEach((edge) => this.view.edges.splice(this.view.edges.indexOf(edge), 1));
+        .forEach((edge) => edge.delete());
       console.log('deleting node: ' + this.label)
+      if (this.view.selection.includes(this)) {
+        this.view.selection.splice(this.view.selection.indexOf(this), 1);
+      }
       this.view.nodes.splice(this.view.nodes.indexOf(this), 1);
     }
   }
@@ -56,6 +60,9 @@ export class ViewEdge extends ViewElement {
 
   delete = () => {
     if (this.view.edges.includes(this)) {
+      if (this.view.selection.includes(this)) {
+        this.view.selection.splice(this.view.selection.indexOf(this), 1);
+      }
       this.view.edges.splice(this.view.edges.indexOf(this), 1);
     }
   }
