@@ -22,6 +22,13 @@ export { ReactComponent as BusinessRepresentation} from './BusinessRepresentatio
 export { ReactComponent as BusinessRole} from './BusinessRole.svg';
 export { ReactComponent as BusinessService} from './BusinessService.svg';
 
+export { ReactComponent as IMDeliverable} from './IMDeliverable.svg';
+export { ReactComponent as IMGap} from './IMGap.svg';
+export { ReactComponent as IMImplementationEvent} from './IMImplementationEvent.svg';
+export { ReactComponent as IMPlateau} from './IMPlateau.svg';
+export { ReactComponent as IMProgram} from './IMProgram.svg';
+export { ReactComponent as IMWorkpackage} from './IMWorkpackage.svg';
+
 export { ReactComponent as MotivationAssessment} from './MotivationAssessment.svg';
 export { ReactComponent as MotivationConstraint} from './MotivationConstraint.svg';
 export { ReactComponent as MotivationDriver} from './MotivationDriver.svg';
@@ -34,6 +41,16 @@ export { ReactComponent as MotivationRequirement} from './MotivationRequirement.
 export { ReactComponent as MotivationStakeholder} from './MotivationStakeholder.svg';
 export { ReactComponent as MotivationUseCase} from './MotivationUseCase.svg';
 export { ReactComponent as MotivationValue} from './MotivationValue.svg';
+
+export { ReactComponent as PhysicalDistributionNetwork} from './PhysicalDistributionNetwork.svg';
+export { ReactComponent as PhysicalEquipment} from './PhysicalEquipment.svg';
+export { ReactComponent as PhysicalFacility} from './PhysicalFacility.svg';
+export { ReactComponent as PhysicalMaterial} from './PhysicalMaterial.svg';
+
+export { ReactComponent as StrategyCapability} from './StrategyCapability.svg';
+export { ReactComponent as StrategyCourseOfAction} from './StrategyCourseOfAction.svg';
+export { ReactComponent as StrategyResource} from './StrategyResource.svg';
+export { ReactComponent as StrategyValueStream} from './StrategyValueStream.svg';
 
 export { ReactComponent as TechnologyArtifact} from './TechnologyArtifact.svg';
 export { ReactComponent as TechnologyCollaboration} from './TechnologyCollaboration.svg';
