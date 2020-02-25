@@ -1,8 +1,8 @@
 import React from 'react';
-import { Container, Row, Col, ButtonGroup, Tabs, Tab, Button, Form } from 'react-bootstrap';
+import { Container, Row, Col, ButtonGroup, Tabs, Tab } from 'react-bootstrap';
 import "bootstrap/dist/css/bootstrap.min.css";
 import { observer } from 'mobx-react';
-import Select, { ValueType, ActionMeta } from 'react-select';
+import { ValueType, ActionMeta } from 'react-select';
 import './App.css';
 import Application from './model/application';
 import Canvas from './graphics/ui/Canvas';
@@ -11,6 +11,7 @@ import { TitleBar } from './components/TitleBar';
 import { CommandButton, Command } from './components/CommandButton';
 import { SearchForm } from './components/SearchForm';
 import { ExpandForm } from './components/ExpandMenu';
+import { FilterForm } from './components/FilterForm';
 
 
 @observer
@@ -25,8 +26,6 @@ class App extends React.Component {
 
   render() {
     const { title, view } = this.appState;
-    const layerFilterOptions = this.appState.layers.map((layer) => ({ value: layer, label: layer }));
-    const activeLayerFilter = this.appState.filter.layers.map((layer) => ({ value: layer, label: layer }));
     return (
       <Container fluid>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
@@ -45,19 +44,7 @@ class App extends React.Component {
                 <ExpandForm appState={this.appState} onSubmit={this.onExpandSubmit} />
               </Tab>
               <Tab eventKey="filter" title="Filter">
-              <Form onSubmit={this.onApplyFilter}>
-                  <Form.Group controlId="searchFilters">
-                    <Form.Label>Filter on types</Form.Label>
-                    <Select styles={{ container: (provided) => ({ ...provided, width: '100%' }) }}
-                      placeholder={'Select types...'}
-                      options={layerFilterOptions}
-                      onChange={this.handleFilterChange}
-                      value={activeLayerFilter}
-                      isMulti
-                      closeMenuOnSelect={false} />
-                  </Form.Group>
-                  <Button variant="primary" type="submit">Apply</Button>
-                </Form>
+                <FilterForm appState={this.appState} onSubmit={this.onApplyFilter} />
               </Tab>
               <Tab eventKey='more' title='More'>
                 <ButtonGroup vertical>
@@ -152,15 +139,12 @@ class App extends React.Component {
       view.nodes
         .filter((n) => !filter.layers.includes(n.layer))
         .forEach((n) => n.delete());
-      filter.layers = [];
     }
     if (filter.types.length > 0) {
       view.nodes
         .filter((n) => !filter.types.includes(n.type))
         .forEach((n) => n.delete());
-      filter.layers = [];
     }
-
   }
 
 }
