@@ -26,6 +26,17 @@ class Canvas extends React.Component<ICanvas> {
     view.absoluteY = calculateOffset(this.canvas, 'offsetTop');
     view.absoluteW = this.canvas?.offsetWidth ?? view.absoluteW;
     view.absoluteH = this.canvas?.offsetHeight ?? view.absoluteH;
+
+    // workaround for Chrome removing preventDefault from wheel events
+    if (this.canvas) {
+      this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.canvas) {
+      this.canvas.removeEventListener('wheel', this.onWheel);
+    }
   }
 
   componentDidUpdate() {
@@ -45,7 +56,7 @@ class Canvas extends React.Component<ICanvas> {
       <div style={{ width: '100%' }}>
         <div id='Canvas' ref={ref => this.canvas = ref} style={style}
           onClick={this.handleClick}
-          onWheel={this.onWheel} >
+           >
           <DraggableCore onStart={this.handleDragStart} onDrag={this.handleDrag} onStop={this.handleDragStop} >
             <svg viewBox={viewPort} >
               {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} />)}
@@ -75,7 +86,8 @@ class Canvas extends React.Component<ICanvas> {
     }
   }
 
-  onWheel = (e: React.WheelEvent) => {
+  onWheel = (e: WheelEvent) => {
+    e.preventDefault();
     if (e.altKey) {
       const { view } = this.props;
       const zoomfactor = e.deltaY / 30;
