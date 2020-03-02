@@ -47,7 +47,7 @@ export class ForceLayout extends BaseLayout implements ILayout {
   update = () => {
     // console.log('Update Force layout', this.simulation.alpha())
     this.simulation.tick();
-    transaction(() =>
+    transaction(() => {
       this.simulation.nodes().forEach((n: d3Node) => {
         const node = this.view.nodes.find((node) => n.id === node.id);
         if (node) {
@@ -55,8 +55,8 @@ export class ForceLayout extends BaseLayout implements ILayout {
           node.y = n.y ? n.y - node.height / 2 : 0;
         }
       })
-    )
-    this.view.zoomToFit();
+      this.view.zoomToFit();
+    });
     if (this.simulation.alpha() <= this.simulation.alphaMin()) {
       this.simulation.stop();
       this.stop();

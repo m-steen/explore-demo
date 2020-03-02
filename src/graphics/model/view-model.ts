@@ -1,4 +1,4 @@
-import { observable, computed, action } from 'mobx';
+import { observable, computed, action, transaction } from 'mobx';
 import { Color } from 'csstype';
 import Ticker from '../tools/ticker';
 import Editor from '../editor';
@@ -13,6 +13,20 @@ export class ViewElement {
 
   constructor(view: GraphicalView) {
     this.view = view;
+  }
+
+  getProperty = (name: string) => {
+    const property = Object.entries(this).find(([key, value]) => name === key);
+    if (property) {
+      const type = typeof(property[1]);
+      if (type !== 'object' && type !== 'function') {
+        return property[1];
+      } else {
+        return undefined;
+      }
+    } else {
+      return undefined;
+    }
   }
 
 }
@@ -69,10 +83,10 @@ export class ViewEdge extends ViewElement {
 }
 
 export class GraphicalView {
-  @observable nodes: ViewNode[] = [];
-  @observable edges: ViewEdge[] = [];
+  @observable.shallow nodes: ViewNode[] = [];
+  @observable.shallow edges: ViewEdge[] = [];
 
-  @observable selection: ViewElement[] = [];
+  @observable.shallow selection: ViewElement[] = [];
   @observable contextMenuActiveFor: string | null = null;
 
   @observable absoluteX = 0;
@@ -102,17 +116,25 @@ export class GraphicalView {
   @action
   clearSelection = () => {
     this.contextMenuActiveFor = null;
-    this.selection = [];
+    if (this.selection.length > 0) {
+      this.selection = [];
+    }
   }
 
   clear = () => {
-    this.layout.stop();
-    this.clearSelection();
-    this.edges = [];
-    this.nodes = [];
-    this.x = 0;
-    this.y = 0;
-    this.w = 1140;
+    transaction(() => {
+      this.layout.stop();
+      this.clearSelection();
+      if (this.edges.length > 0) {
+        this.edges = [];
+      }
+      if (this.nodes.length > 0) {
+        this.nodes = [];
+      }
+      this.x = 0;
+      this.y = 0;
+      this.w = 1140;
+    })
   }
 
   @action

@@ -2,6 +2,7 @@ import React from 'react';
 import { Container, Row, Col, ButtonGroup, Tabs, Tab } from 'react-bootstrap';
 import "bootstrap/dist/css/bootstrap.min.css";
 import { observer } from 'mobx-react';
+import { transaction } from 'mobx';
 import { ValueType, ActionMeta } from 'react-select';
 import './App.css';
 import Application from './model/application';
@@ -12,6 +13,7 @@ import { CommandButton, Command } from './components/CommandButton';
 import { SearchForm } from './components/SearchForm';
 import { ExpandForm } from './components/ExpandMenu';
 import { FilterForm } from './components/FilterForm';
+import { DataTable } from './components/PropertyTable';
 
 
 @observer
@@ -25,7 +27,8 @@ class App extends React.Component {
   }
 
   render() {
-    const { title, view } = this.appState;
+    const { title, view, grid } = this.appState;
+
     return (
       <Container fluid>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
@@ -58,7 +61,7 @@ class App extends React.Component {
           <Col md={8}>
             <Row style={{ marginTop: 0, marginBottom: 5 }}>
               <Col style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
-                <div style={{ height: 40 }}>{view.selection.filter((e) => e instanceof ViewNode).map((e) => e.label).join(', ')}</div>
+                <DataTable columns={grid.columns} rows={grid.rows} />
               </Col>
             </Row>
             <Row style={{ marginTop: 5, marginBottom: 0 }}>
@@ -79,7 +82,7 @@ class App extends React.Component {
 
   onLoad: Command = () => {
     return this.appState.api.loadAll(this.appState.view)
-    .then(() => this.appState.view.layout.apply());
+      .then(() => this.appState.view.layout.apply());
   }
 
   onLayout: Command = () => this.appState.view.layout.apply();
@@ -89,9 +92,11 @@ class App extends React.Component {
     const query = this.appState.query;
     const filter = this.appState.filter;
     const view = this.appState.view;
-    this.appState.api.getObjects(query, filter, view)
+    transaction(() => {
+      this.appState.api.getObjects(query, filter, view)
       .then(() => this.appState.filter.layers = [])
       .then(() => this.appState.view.layout.apply());
+    })
   }
 
   onExpandSubmit = (e: React.FormEvent<HTMLFormElement>) => {
