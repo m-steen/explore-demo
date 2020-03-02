@@ -41,7 +41,7 @@ class App extends React.Component {
           <Col md={4} style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
             <Tabs defaultActiveKey="profile" id="uncontrolled-tab-example">
               <Tab eventKey="search" title="Search">
-                <SearchForm appState={this.appState} onSubmit={this.onQuerySubmit} />
+                <SearchForm appState={this.appState} onSubmit={this.onQuerySubmit} onClear={this.onClear} />
               </Tab>
               <Tab eventKey="expand" title="Expand">
                 <ExpandForm appState={this.appState} onSubmit={this.onExpandSubmit} />

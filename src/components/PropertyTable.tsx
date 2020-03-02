@@ -77,7 +77,7 @@ export class GridModel {
         }
       })
     })
-    console.log(this.rows)
+    console.log(this.rows.length)
   });
 
 }

@@ -3,10 +3,12 @@ import { observer } from 'mobx-react';
 import { Form, InputGroup, Button, FormProps } from 'react-bootstrap';
 import Application from '../model/application';
 import Select, { ValueType, ActionMeta } from 'react-select';
+import { CommandButton, Command } from './CommandButton';
 
 export interface ISearchForm extends FormProps {
   appState: Application;
   onSubmit?: React.FormEventHandler<any>;
+  onClear: Command;
 }
 
 @observer
@@ -68,7 +70,8 @@ export class SearchForm extends React.Component<ISearchForm> {
             isMulti
             closeMenuOnSelect={false} />
         </Form.Group>
-        <Button variant="primary" type="submit">Find</Button>
+        <CommandButton label={'Clear'} command={this.props.onClear} />
+        <Button variant="primary" type="submit">Add</Button>
       </Form>
     )
   }
