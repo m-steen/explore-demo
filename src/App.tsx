@@ -59,16 +59,14 @@ class App extends React.Component {
             </Tabs>
           </Col>
           <Col md={8}>
-            <Row style={{ marginTop: 0, marginBottom: 5 }}>
-              <Col style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
-                <DataTable columns={grid.columns} rows={grid.rows} />
-              </Col>
-            </Row>
-            <Row style={{ marginTop: 5, marginBottom: 0 }}>
-              <Col style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
+            <Tabs id="content-views">
+              <Tab eventKey="graph" title="Graph">
                 <Canvas view={view} />
-              </Col>
-            </Row>
+              </Tab>
+              <Tab eventKey="table" title="Table">
+                <DataTable columns={grid.columns} rows={grid.rows} />
+              </Tab>
+            </Tabs>
           </Col>
         </Row>
       </Container>
