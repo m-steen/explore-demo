@@ -70,6 +70,9 @@ class Api {
             array.each((result) => {
               console.log(result)
               const { relation: r, target: t } = result;
+              if (!t || !r) { // workaround for incomplete data
+                return;
+              }
               let target = view.nodes.find((x) => t.id === x.id);
               if (target === undefined) {
                 target = new ViewNode(view);
@@ -113,6 +116,9 @@ class Api {
             array.each((result) => {
               console.log(result)
               const { source: s, relation: r } = result;
+              if (!s || !r) { // workaround for incomplete data
+                return;
+              }
               let source = view.nodes.find((x) => s.id === x.id);
               if (source === undefined) {
                 source = new ViewNode(view);
