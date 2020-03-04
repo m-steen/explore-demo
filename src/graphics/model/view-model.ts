@@ -140,15 +140,15 @@ export class GraphicalView {
   @action
   selectElement = (element: ViewElement) => {
     this.selection.push(element);
-    console.log('Selected ' + element.label)
+    console.log('Select Element: ' + element.label)
   }
 
   toggleSelection = (element: ViewElement) => {
+    console.log('Toggle Selection for: ' + element.label)
     if (this.selection.includes(element)) {
       this.selection.splice(this.selection.indexOf(element), 1);
     } else {
       this.selection.push(element);
-      console.log('Selected ' + element.label)
     }
   }
 

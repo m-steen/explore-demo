@@ -69,7 +69,7 @@ class Canvas extends React.Component<ICanvas> {
             onPlus={this.increaseZoom}
             onMinus={this.decreaseZoom}
             onZoomToFit={view.zoomToFit} />
-          <ContextMenu view={view} canvas={this.canvas} />
+          <ContextMenu view={view} />
         </div>
         {/* <p> x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p> */}
       </div>
@@ -82,8 +82,8 @@ class Canvas extends React.Component<ICanvas> {
     } else {
       const { view } = this.props;
       view.clearSelection();
-      e.stopPropagation();
     }
+    e.stopPropagation();
   }
 
   onWheel = (e: WheelEvent) => {
@@ -112,7 +112,7 @@ class Canvas extends React.Component<ICanvas> {
   }
 
   handleDragStart: DraggableEventHandler = (e, data) => {
-    if (e.shiftKey) {
+    if (e.shiftKey && this.props.view.selection.length === 0) {
       const { view } = this.props;
       view.clearSelection();
       const offsetLeft = view.absoluteX // calculateOffset(this.canvas, 'offsetLeft');
@@ -154,7 +154,10 @@ class Canvas extends React.Component<ICanvas> {
       const minY = Math.min(this.lassoToolOrigin.y, this.lassoToolMaxim.y);
       const maxX = Math.max(this.lassoToolOrigin.x, this.lassoToolMaxim.x);
       const maxY = Math.max(this.lassoToolOrigin.y, this.lassoToolMaxim.y);
-      view.selection = view.nodes.filter((n) => (minX < n.x && n.x < maxX) && (minY < n.y && n.y < maxY));
+      view.selection = (view.nodes.filter((n) => (minX < n.x && n.x < maxX) && (minY < n.y && n.y < maxY)) as ViewElement[])
+        .concat(view.edges.filter((e) => 
+          (minX < Math.min(e.source.x, e.target.x) && Math.max(e.source.x, e.target.x) < maxX) && 
+          (minY < Math.min(e.source.y, e.target.y) && Math.max(e.source.y, e.target.y) < maxY)) as ViewElement[]);
       e.stopPropagation();
     }
   }
@@ -182,7 +185,7 @@ const ZoomControls: React.FC<IZoomControls> = observer((props) => {
   )
 })
 
-const ContextMenu: React.FC<{ view: GraphicalView, canvas: HTMLDivElement | null }> = observer((props) => {
+const ContextMenu: React.FC<{ view: GraphicalView}> = observer((props) => {
   const { view } = props;
   if (view.contextMenuActiveFor === null) {
     return null;
@@ -222,7 +225,7 @@ const LassoTool: React.FC<{ view: GraphicalView, active: boolean, origin: Positi
     const w = Math.abs(maxim.x - origin.x);
     const h = Math.abs(maxim.y - origin.y);
 
-    const style: React.CSSProperties = { strokeDasharray: 2 / view.zoom, stroke: 'grey', strokeWidth: active ? 1 / view.zoom : 0, fill: 'none' };
+    const style: React.CSSProperties = { strokeDasharray: view.zoom !== 0 ? 2 / view.zoom : 0, stroke: 'grey', strokeWidth: active && view.zoom !== 0 ? 1 / view.zoom : 0, fill: 'none' };
 
     return <rect x={x} y={y} width={w} height={h} style={style} />
 })

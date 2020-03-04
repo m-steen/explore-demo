@@ -1,6 +1,7 @@
 import React from 'react';
 import { ViewEdge } from '../model/view-model';
 import { observer } from 'mobx-react';
+import { transaction } from 'mobx';
 
 export interface IGraphicLink {
   edge: ViewEdge;
@@ -38,8 +39,10 @@ class GraphicLink extends React.Component<IGraphicLink> {
   handleClick = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
     const { edge } = this.props;
     if (!e.shiftKey) {
-      edge.view.clearSelection();
-      edge.view.selectElement(edge);
+      transaction(() => {
+        edge.view.clearSelection();
+        edge.view.selectElement(edge);
+        });
     } else {
       edge.view.toggleSelection(edge);
     }
