@@ -1,0 +1,1009 @@
+//using http for Connection.doc.connector.http;
+//using json for Connection.doc.connector.json;
+using logging for Connection.doc.connector.logging;
+
+
+function getAuthentication()
+{
+//	return Structure("type", "None");
+	auth = Structure("type", "None");
+	auth.add("username", "root");
+	auth.add("password", "openSesame");
+	return auth;
+}
+
+function getSettings() {
+	settings = Structure();
+	settings.add("serverUrl", "http://localhost:8529");
+	settings.add("database", "repo");
+	settings.add("auth", getAuthentication());
+	return settings;
+}
+
+//
+// ENCODE
+//
+function encodeJSON(element, byref result, byref err)
+{
+	result	= undefined;
+	level	= 0;
+
+	if (element.isStructure())
+	{
+		return encodeObject(element, result, err);
+	}
+	else if (element.isList() || element.isSet())
+	{
+		return encodeArray(element, result, err);
+	}
+	else if (element.isString())
+	{
+		return encodeString(element, result, err);
+	}
+	else if (element.isReal() || element.isInteger())
+	{
+		return encodeNumber(element, result, err);
+	}
+	else if (element.isMoney())
+	{
+		return encodeMoney(element, result, err);
+	}
+	else if (element.isBoolean())
+	{
+		return encodeBoolean(element, result, err);
+	}
+	else if (element.isUndefined())
+	{
+		result	= "null";
+		return true;
+	}
+	else if (element.isDate())
+	{
+		return encodeDate(element, result, err);
+	}
+	else if (element.isEnum())
+	{
+		return encodeEnum(element, result, err);
+	}
+	else if (element.isPair())
+	{
+		return encodePair(element, result, err);
+	}
+	else if (element.isObject())
+	{
+		return encodeObjectRef(element, result, err);
+	}
+	else if (element.isGUID())
+	{
+		return encodeGUID(element, result, err);
+	}
+	else if (element.isTime())
+	{
+		return encodeTime(element, result, err);
+	}
+	else if (element.isRtf())
+	{
+		return encodeString(element.toString(), result, err);
+	}
+	else
+	{
+		err = "Invalid element";
+		return false;
+	}
+}
+
+function encodeObject(element, byref result, byref err)
+{
+	result	= "{ ";
+	forall key, value in element
+	{
+		keyString	= undefined;
+		ok			= encodeString(key, keyString, err);
+		if (!ok)
+			return false;
+
+		valueString	= undefined;
+		ok			= encodeJSON(value, valueString, err);
+		if (!ok)
+		{
+			err = "Invalid value '" + value.toString() + "' in structure element: " + element.toString();
+			return false;
+		}
+
+		if (result.size() > 2)
+		{
+			result	= result + " , ";
+		}
+		result		= result + keyString + " : " + valueString;
+
+	}
+	result	= result + " }";
+	return true;
+}
+
+function encodeArray(element, byref result, byref err)
+{
+	result	= "[ ";
+	forall value in element
+	{
+		valueString	= undefined;
+		ok			= encodeJSON(value, valueString, err);
+		if (!ok)
+		{
+			err	= "Invalid value '" + value.toString() + "' in array element: " + element.toString();
+			return false;
+		}
+
+		if (result.size() > 2)
+		{
+			result	= result + " , ";
+		}
+		result		= result + valueString;
+
+	}
+	result	= result + " ]";
+	return true;
+}
+
+function encodeString(element, byref result, byref err)
+{
+	result	= "\"";
+
+	forall ch in element
+	{
+		if (ch == "\"")
+		{
+			result = result + "\\\"";
+		}
+		else if (ch == "\\")
+		{
+			result = result + "\\\\";
+		}
+		else if (ch == "/")
+		{
+			result = result + "\\/";
+		}
+//		else if ( ch == "\b" )
+//		{
+//			result = result + "\\b";
+//		}
+//		else if ( ch == "\f" )
+//		{
+//			result = result + "\\f";
+//		}
+		else if (ch == "\n")
+		{
+			result = result + "\\n";
+		}
+		else if (ch == "\r")
+		{
+			result = result + "\\r";
+		}
+		else if (ch == "\t")
+		{
+			result = result + "\\t";
+		}
+		else if (nonASCII(ch))
+		{
+			// TO DO
+		}
+		else
+		{
+			result	= result + ch;
+		}
+	}
+	result	= result + "\"";
+	return true;
+}
+
+function encodeNumber(element, byref result, byref err)
+{
+	result	= element.toString();
+	return true;
+}
+
+function encodeMoney(element, byref result, byref err)
+{
+	_value = Structure("amount", element.amount, "currency", element.currency);
+	return encodeObject(_value, result, err);
+}
+
+function encodeBoolean(element, byref result, byref err)
+{
+	result	= element.toString();
+	return true;
+}
+
+function encodeUndefined(element, byref result, byref err)
+{
+	result	= "null";
+	return true;
+}
+
+function encodeDate(element, byref result, byref err)
+{
+	day			= element.day;
+	month		= element.month;
+	year		= element.year;
+	day			= ( day < 10 ? "0" : "" ) + day;
+	month		= ( month < 10 ? "0" : "" ) + month;
+	return encodeString(year + "-" + month + "-" + day, result, err);
+}
+
+function encodeEnum(element, byref result, byref err)
+{
+	enumValues	= Component.reflect:enumValues(element.type());
+	if (enumValues != undefined)
+	{
+		_value		= Component.reflect:findEnumValue(element, enumValues);
+		_element	= Structure("name", element.toString(), "value", _value);
+		return encodeObject(_element, result, err);
+	}
+	return false;
+}
+
+function encodePair(element, byref result, byref err)
+{
+	if (element.first == "jsonstring")
+	{
+		result	= "\"" + element.second + "\"";
+		return true;
+	}
+	else
+	{
+		_element	= Structure("first", element.first, "second", element.second);
+		return encodeObject(_element, result, err);
+	}
+}
+
+function encodeObjectRef(element, byref result, byref err)
+{
+	if (element.isValid())
+	{
+		return encodeString(element.id().toString(), result, err);
+	}
+	else
+	{
+		result = "null";
+		return true;
+	}
+}
+
+function encodeGUID(element, byref result, byref err)
+{
+	return encodeString(element.toString(), result, err);
+}
+
+function encodeTime(element, byref result, byref err)
+{
+	_value = Structure("amount", element.amount, "unit", element.unit);
+	return encodeObject(_value, result, err);
+}
+
+//
+// DECODE
+//
+function decodeJSON(text, byref value, byref err)
+{
+	node		= parseJson(text);
+	if (node == undefined)
+	{
+		err	= "Unknown JSON parse error";
+		logging:writeToDebugLog(err);
+		return false;
+	}
+	else if (node.contains("error"))
+	{
+		err = "JSON parse error line " + node.line.toString() + ", col " + node.valueFor("column").toString() + ": " + node.valueFor("error") + " " + node.expect.toString()
+			+ "\n\r\n\r" + text + "\n\r";
+		logging:writeToDebugLog(err);
+		return false;
+	}
+	else if (!node.isStructure() && !node.isString())
+	{
+		err	= "Unknown JSON parse error";
+		logging:writeToDebugLog(err);
+		return false;
+	}
+
+	return getJSONValue(node, value, err);
+}
+
+function nonASCII(ch)
+{
+	return false;
+}
+
+function parseJson(jsonString)
+{
+	grammar = "root : value  eof .\n" +
+		"value : string | number | object | array | true | false | null .\n" +
+		"string : \"\\\"\" ( \\nows ('\\\\' \\nows '\\\\','\\\"','/','b','f','n','r,'t','u' | character) ) SEQ OPT \"\\\"\" [+string] .\n" +
+		"character : ' '..'!', '#'..'[', ']'..'~', '\\u0080'..'\\uFFFF' .\n" +
+		"number : '-' OPT (\\nows '0'..'9') SEQ (\\nows '.' (\\nows '0'..'9') SEQ) OPT\n" +
+		"              (('e' | 'E') ('+' | '-') OPT (\\nows '0'..'9') SEQ) OPT [+number] .\n" +
+		"object : \"{\" ( member LIST ) OPT \"}\" [object] .\n" +
+		"member : string \":\" value [member] .\n" +
+		"array : \"[\" ( value LIST ) OPT \"]\" [array] .\n" +
+		"true : \"true\" [true] .\n" +
+		"false : \"false\" [false] .\n" +
+		"null : \"null\" [null] .\n";
+
+	utils = InternalObject("client").utils();
+	return utils.parse(grammar, jsonString);
+}
+
+function getJSONObject(objectNode, byref value, byref err)
+{
+	if (objectNode.contains("type") && objectNode.type == "object")
+	{
+		if (objectNode.contains("children") && objectNode.children.size() == 1)
+		{
+			listNode	= objectNode.children[1];
+			if (listNode == undefined)
+			{
+				// Empty structure
+				value	= Structure();
+				return true;
+			}
+			else if (listNode.contains("type") && listNode.type == "list")
+			{
+				s			= Structure();
+				memberNodes	= listNode.children;
+				forall memberNode in memberNodes
+				{
+					if (memberNode.contains("type") && memberNode.type == "member")
+					{
+						children		= memberNode.children;
+						keyNode			= children[1];
+						valueNode		= children[2];
+						if (keyNode.contains("type") && keyNode.type == "string")
+						{
+							k			= keyNode.children[1].value;
+							v			= undefined;
+							ok			= getJSONValue(valueNode, v, err);
+							if (!ok)
+								return false;
+
+							s.add(k, v);
+						}
+					}
+				}
+				value	= s;
+				return true;
+			}
+		}
+		else if (!objectNode.contains("children") || objectNode.children.empty())
+		{
+			// Empty structure
+			value	= Structure();
+			return true;
+		}
+	}
+	err	= "Cannot get object from json structure";
+	return false;
+}
+
+function getJSONArray(arrayNode, byref value, byref err)
+{
+	if (arrayNode.contains("type") && arrayNode.type == "array")
+	{
+		if (arrayNode.contains("children") && arrayNode.children.size() == 1)
+		{
+			listNode	= arrayNode.children[1];
+			if (listNode == undefined)
+			{
+				// Empty list
+				value	= List();
+				return true;
+			}
+			else if (listNode.contains("type") && listNode.type == "list")
+			{
+				l			= List();
+				listNodes	= listNode.children;
+				forall listNode in listNodes
+				{
+					v		= undefined;
+					ok		= getJSONValue(listNode, v, err);
+					if (!ok)
+						return false;
+
+					l.add(v);
+				}
+				value		= l;
+				return true;
+			}
+		}
+		else if (!arrayNode.contains("children") || arrayNode.children.empty())
+		{
+			// Empty list
+			value	= List();
+			return true;
+		}
+	}
+	err	= "Cannot retrieve array values";
+	return false;
+}
+
+function getJSONString(stringNode, byref value, byref err)
+{
+	if (stringNode.contains("type") && stringNode.type == "string")
+	{
+		value	= stringNode.children[1].value;
+		return true;
+	}
+	err	= "Cannot get string from json structure";
+	return false;
+}
+
+function getJSONNumber(numberNode, byref value, byref err)
+{
+	if (numberNode.contains("type") && numberNode.type == "number")
+	{
+		number	= numberNode.children[1].value;
+		if (number.isNumber())
+		{
+			value	= number.toNumber();
+			return true;
+		}
+	}
+	err	= "Cannot get number from json structure";
+	return false;
+}
+
+function getJSONValue(node, byref value, byref err)
+{
+	if (node.contains("type"))
+	{
+		if (node.type == "object")
+		{
+			return getJSONObject(node, value, err);
+		}
+		else if (node.type == "array")
+		{
+			return getJSONArray(node, value, err);
+		}
+		else if (node.type == "string")
+		{
+			return  getJSONString(node, value, err);
+		}
+		else if (node.type == "number")
+		{
+			return getJSONNumber(node, value, err);
+		}
+		else if (node.type == "true")
+		{
+			value	= true;
+			return true;
+		}
+		else if (node.type == "false")
+		{
+			value	= false;
+			return true;
+		}
+		else if (node.type == "null")
+		{
+			value	= undefined;
+			return true;
+		}
+		else
+		{
+			err	= "Unrecognized type " + node.type;
+			return false;
+		}
+	}
+	else if (node.contains("value"))
+	{
+		value	= node.value;
+		return true;
+	}
+
+	err	= "Cannot get value from json structure";
+	return false;
+}
+
+function toGraph(object, byref objectDocs, byref nestingDocs, byref relationDocs, byref blockDocs)
+{
+	nestingDoc = nestingToDoc(object);
+	if (nestingDoc != undefined)
+	{
+		nestingDocs.add(nestingDoc);
+	}
+
+	if (object is "AbstractRelation")
+	{
+		relationDocs.add(relationToDoc(object));
+	}
+	else
+	{
+		objectDocs.add(objectToDoc(object));
+	}
+
+	attrDocs = attrsToDocs(object);
+	forall p, attrDoc in attrDocs
+	{
+		blockDocs.add(attrDoc);
+	}
+
+	metricsDoc = metricsToDoc(object);
+	if (metricsDoc != undefined) {
+		blockDocs.add(metricsDoc);
+	}
+
+	forall List("AbstractElement",
+	"AbstractCompound",
+	"AbstractMember",
+	"AbstractRelation",
+	"AbstractScheme",
+	"AbstractFolder",
+	"MM_Folder",
+	"MM_Model") child in object.children()
+	{
+
+		toGraph(child, objectDocs, nestingDocs, relationDocs, blockDocs);
+	}
+}
+
+function objectToDoc(object)
+{
+	id = object.id();
+	mm = object.metaModel();
+	types = objectTypes(object);
+	type = object is "Relation" && !types[1].contains("Relation") ? 
+		types[2] : types[1];
+	category = objectCategory(object);
+	meta = Structure("metamodel", mm, "types", types, "category", category);
+	name = object is "MM_Folder" || object is "MM_ModelPackage" || object is "AbstractFolder" ? object.nm : object.attrValue("nm");
+	return Structure("_key", id, "id", id, "name", name, "type", type, "layer", category, "meta", meta);
+}
+
+function objectTypes(object)
+{
+	objectTypes = List();
+
+	config= InternalObject("configuration").context(modelpackage);
+	metamodel = config.metaModel(object.metaModel());
+
+	concept = object.type().name().split(":")[2];
+	if (!metamodel.definesConcept(concept))
+	{
+		error "objectTypes: cannot determine type of " + object;
+		return List();
+	}
+	concept = metamodel.concept(concept);
+
+	while (concept != undefined)
+	{
+		objectTypes.add(concept.name());
+		concept = concept.baseConcept();
+	}
+	return objectTypes;
+}
+
+function objectCategory(object)
+{
+	objectCategory = "None";
+	mm = object.metaModel();
+	if (mm == "ArchiMate")
+	{
+		objectType = object.type().name().replace(mm + ":", "");
+		size = objectType.size();
+		categories = List("Motivation", "Strategy", "Business", "Application", "Technology", "IM", "Composite", "RS");
+		forall category in categories
+		{
+			cSize = category.size();
+			if (size >= cSize && objectType.substring(1, cSize) == category)
+			{
+				objectCategory = category;
+				break;
+			}
+		}
+	}
+	return objectCategory;
+}
+
+function relationToDoc(relation)
+{
+	doc = objectToDoc(relation);
+	doc.add("_from", getArangoDBId(relation.from));
+	doc.add("_to", getArangoDBId(relation.to));
+	return doc;
+}
+
+function nestingToDoc(object)
+{
+	parent = object.parent();
+	if (parent != undefined)
+	{
+		parentId = parent.id();
+		id = object.id();
+
+		return Structure("_key", id + "--" + parentId, "_from", getArangoDBId(object), "_to", getArangoDBId(parent));
+	}
+	else
+	{
+		return undefined;
+	}
+}
+
+function getArangoDBId(object)
+{
+	return (object is "AbstractRelation" ? "Relations" : "Objects") + "/" + object.id();
+}
+
+function attrsToDocs(object)
+{
+	docs = Index();
+	forall attr in object.attrs()
+	{
+//		attr = object.attr("name");
+		attrName = attr.name();
+		attrValue = object.attrValue(attrName);
+		attrProfile = attr.profile();
+		doc = docs.valueFor(attrProfile);
+		if (doc == undefined)
+		{
+			id = getArangoDBId(object);
+			doc = Structure("type", "profile", "name", attrProfile.name().toString(), "label", translate(attrProfile), "_from", id, "_to", id);
+		}
+		if (attr.type() == "date") {
+			attrValue = Component.utils.date:theDateInDays(attrValue);
+//			attrValue = attrValue < 0 ? 0 : attrValue;
+		}
+		doc.add(attrName, Structure("name", attrName, "type", attr.type() , "value", attrValue, "label", translate(attr)));
+		docs.add(attrProfile, doc);
+	}
+	return docs;
+}
+
+function metricsToDoc(object)
+{
+	metric_assessments = object.taggedValueReferrals("assessments");
+	if (metric_assessments.empty()) {
+		return undefined;
+	}
+	id = getArangoDBId(object);
+	doc = Structure("type", "metrics", "name", "metrics", "label", translate("MotivationMetric"), "_from", id, "_to", id);
+	forall "MotivationMetric" metric in metric_assessments
+	{
+		value = undefined;
+		ok = ArchiMate.metrics:metricValue(object, metric, value);
+		if (ok)
+		{
+			metricIdentifier = metric.hasUserValue("identifier") ? metric.attrValue("identifier") : metric.attrValue("nm");
+			doc.add(metricIdentifier, Structure("name", metricIdentifier, "type", metric.attrValue("metricType").name(), "value", value, "label", metric.attrValue("nm")));
+			output metricIdentifier, metric.attrValue("metricType").name(), value;
+		}
+	}
+	return doc;
+}
+
+function getHTTPObject()
+{
+	xmlHttp = ExternalObject("MSXML2.XMLHTTP");
+	if (xmlHttp == undefined)
+	{
+		error "Failed to create HTTP object.";
+		stop;
+	}
+	return xmlHttp;
+}
+
+function buildUrl(server, database, path) {
+	return format("%s/%s/%s", server, database, path);
+}
+
+function getHeaders()
+{
+	return Structure(
+		"content-type", "application/json",
+		"accept", "application/json",
+		"if-modified-since", "Sat, 1 Jan 2000 00:00:00 GMT");
+}
+
+function request(method, path, body, byref status, byref response)
+{
+	httpObject = getHTTPObject();
+
+	async = false;
+	settings = getSettings();
+	url = settings.contains("database") && !settings.database.empty() ?
+		settings.serverUrl + "/_db/" + settings.database + path :
+		settings.serverUrl + path;
+	auth = settings.auth;
+	doAuth = auth.isStructure() && auth.type != "None";
+	username = doAuth && auth.type == "Basic" ? auth.username : undefined;
+	password = doAuth && auth.type == "Basic" ? auth.password : undefined;
+
+	logging:writeToDebugLog("HTTP " + method + " " + url);
+
+	// Open connection
+	//
+	session "continue on external error" true;
+	httpObject.clearError();
+	if (username != undefined && password != undefined)
+	{
+		httpObject.open(method, url, async, username, password);
+	}
+	else
+	{
+		httpObject.open(method, url, async);
+	}
+	session "continue on external error" false;
+	if (httpObject.hasError())
+	{
+		logging:writeToDebugLog("ERROR: " + httpObject.getError());
+		return false;
+	}
+
+	headers = getHeaders();
+	forall headerName, headerValue in headers
+	{
+		httpObject.setRequestHeader(headerName, headerValue);
+	}
+
+	// Send message
+	//
+	bodyJSON = "";
+	if (body != undefined)
+	{
+		err = "";
+		ok = encodeJSON(body, bodyJSON, err);
+		if (!ok)
+		{
+			logging:writeToDebugLog("ERROR");
+			logging:writeToDebugLog("ERROR: " + err);
+			logging:writeToDebugLog("ERROR: Cannot encode body ( " + err + ")\n" + body);
+			logging:writeToDebugLog("ERROR");
+			logging:writeToDebugLog("ERROR");
+			return false;
+		}
+	}
+
+	session "continue on external error" true;
+	httpObject.clearError();
+	if (bodyJSON.isString() && !bodyJSON.trim().empty())
+	{
+		logging:writeToDebugLog("Body: " + bodyJSON);
+		httpObject.send(bodyJSON);
+	}
+	else
+	{
+		httpObject.send();
+	}
+	session "continue on external error" false;
+	if (httpObject.hasError())
+	{
+		logging:writeToDebugLog("ERROR: " + httpObject.getError());
+		return false;
+	}
+
+	statusCode = httpObject.status;
+	status = statusCode + " - " + httpObject.statusText;
+
+	logging:writeToDebugLog("Status: " + status);
+
+	if (statusCode < 200 || statusCode > 202)
+	{
+		return false;
+	}
+
+	responseJSON = httpObject.responseText;
+	logging:writeToDebugLog("Response (JSON): " + responseJSON);
+
+	ok = true;
+	if (responseJSON.isString() && !responseJSON.trim().empty())
+	{
+		response = undefined;
+		err = undefined;
+		ok = decodeJSON(responseJSON, response, err);
+		logging:writeToDebugLog(ok ? ("Response: " + response) : "ERROR: Cannot interpret response");
+	}
+	return ok;
+}
+
+function getDocument(docId, options, byref doc)
+{
+	method = "GET";
+	path = "/_api/document/" + docId;
+	body = undefined;
+	status = undefined;
+	response = undefined;
+	logFile = undefined;
+	err = undefined;
+
+	ok = request(method, path, body, status, response);
+	if (ok)
+	{
+		doc = response;
+	}
+	else
+	{
+		error "arrangodb:getDocument - " + status;
+	}
+	return ok;
+}
+
+function addNewDocuments(docs, collection, options, byref newDocs)
+{
+	method = "POST";
+	path = "/_api/document/" + collection;
+	if (options.isStructure())
+	{
+		query = "";
+		if (options.contains("returnNew") && options.returnNew == true)
+		{
+			if (!query.empty()) query.add("&");
+			query.add("returnNew=true");
+		}
+
+		if (!query.empty())
+		{
+			path.add("?");
+			path.add(query);
+		}
+	}
+	status = undefined;
+	response = undefined;
+	body = docs;
+
+	output path, method;
+	output body;
+	ok = request(method, path, body, status, response);
+	if (ok)
+	{
+		newDocs = response;
+	}
+	else
+	{
+		error "arrangodb:addNewDocuments: " + status;
+	}
+	return ok;
+}
+
+function getCollections(byref collections)
+{
+	method = "GET";
+	path = "/_api/collection?excludeSystem=true";
+	body = undefined;
+	status = undefined;
+	response = undefined;
+
+	ok = request(method, path, body, status, response);
+	if (ok)
+	{
+		collections = List();
+		forall element in response.result
+		{
+			if (element.name.size() > 0 && element.name[1] != "_")
+			{
+				collections.add(element.name);
+			}
+		}
+	}
+	else
+	{
+		error "arrangodb:getCollections - " + status;
+	}
+	return ok;
+}
+
+function createCollection(collection, type, options)
+{
+	_type = type == "document" ? 2 : type == "edge" ? 3 : 0;
+	if (_type == 0)
+	{
+		error "arrangodb:createCollection: invalid collection type: " + type;
+	}
+	method = "POST";
+	path = "/_api/collection";
+	body = Structure("name", collection, "type", _type);
+	status = undefined;
+	response = undefined;
+
+	ok = request(method, path, body, status, response);
+	if (ok)
+	{
+		message "Created collection " + collection;
+	}
+	else
+	{
+		error "arrangodb:createCollection - " + status;
+	}
+	return ok;
+}
+
+function existsCollection(collection, collections)
+{
+	if (collections == undefined || collections.empty())
+	{
+		if (!getCollections(collections))
+		{
+			return false;
+		}
+	}
+	return collections.contains(collection);
+}
+
+function dropCollection(collection)
+{
+	method = "DELETE";
+	path = "/_api/collection/" + collection;
+	body = undefined;
+	status = undefined;
+	response = undefined;
+
+	ok = request(method, path, body, status, response);
+	if (ok)
+	{
+		message "Dropped collection " + collection;
+	}
+	else
+	{
+		error "arrangodb:dropCollection - " + status;
+	}
+	return ok;
+}
+
+function ensureIndex(collection, type, attributes)
+{
+	method = "POST";
+	path = format("/_api/index?collection=%s", collection);
+	body = Structure(
+		"type", type,
+		"fields", attributes,
+		"minLength", 3
+	);
+	bodyJSON = undefined;
+	err = "";
+	encodeObject(body, bodyJSON, err);
+	status = undefined;
+	response = undefined;
+
+	ok = request(method, path, bodyJSON, status, response);
+	output method, path, body, status, response;
+}
+
+
+existingCollections = List();
+getCollections(existingCollections);
+
+collections = List(
+	Structure("name", "Objects", "type", "document"),
+	Structure("name", "Relations", "type", "edge"),
+	Structure("name", "Blocks", "type", "edge"),
+	Structure("name", "Nesting", "type", "edge"));
+
+forall collection in collections
+{
+	if (existsCollection(collection.name, existingCollections))
+	{
+		dropCollection(collection.name);
+	}
+}
+
+forall collection in collections
+{
+	createCollection(collection.name, collection.type, undefined);
+}
+
+objectDocs = List();
+nestingDocs = List();
+relationDocs = List();
+blockDocs = List();
+toGraph(modelpackage, objectDocs, nestingDocs, relationDocs, blockDocs);
+
+newObjectDocs = undefined;
+ok = addNewDocuments(objectDocs, "Objects", undefined, newObjectDocs);
+if (ok) {
+	ensureIndex("Objects", "fulltext", List("name"));
+}
+
+newNestingDocs = undefined;
+addNewDocuments(nestingDocs, "Nesting", undefined, newNestingDocs);
+
+newRelationDocs = undefined;
+addNewDocuments(relationDocs, "Relations", undefined, newNestingDocs);
+
+newBlockDocs = undefined;
+addNewDocuments(blockDocs, "Blocks", undefined, newBlockDocs);
