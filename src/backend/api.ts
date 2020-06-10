@@ -4,46 +4,72 @@ import { v4 as uuid } from 'uuid';
 import { GraphicalView, ViewNode, ViewEdge } from '../graphics/model/view-model';
 import { Filter } from '../model/application';
 
+function object2Node(object: {[key: string]: any}, view: GraphicalView) {
+  const node = new ViewNode(view);
+  node.id = object.id;
+  node.label = object.name;
+  node.layer = object.layer;
+  node.type = object.type;
+  node.shape = object.type;
+  node.width = 40;
+  node.height = 30;
+  return node;
+}
+
+function addProperties(node: ViewNode, documents: {[key: string]: any}[]) {
+  let properties: {[key: string]: any} = {};
+  documents.forEach((doc: {[key: string]: any}) => {
+    Object.keys(doc).forEach((key) => {
+      properties[key] = doc[key];
+    })
+  });
+  node.properties = properties;
+  return node;
+}
+
 class Api {
   url: string = 'http://localhost:8529';
   username: string = 'root';
   password: string = 'openSesame';
+  database: string = 'repo';
   db: Database;
 
   constructor() {
     this.db = new Database({
       url: this.url,
     });
+    this.db.useDatabase(this.database);
     this.db.useBasicAuth(this.username, this.password);
   }
 
   getObjects: (query: string, filter: Filter, view: GraphicalView) => Promise<void> =
     (query, filter, view) => {
       view.layout.stop();
-      const iteratorPart = query.length === 0 ? aql`FOR obj IN Objects` : aql`FOR obj IN FULLTEXT("Objects", "name", ${query})`;
-      const layerFilter = filter.layers.length > 0 ? aql`FILTER obj.meta.category IN ${filter.layers}` : aql``;
-      const typeFilter = filter.types.length > 0 ? aql`FILTER obj.meta.types[0] IN ${filter.types}` : aql``;
+      const iteratorPart = query.length === 0 ? aql`FOR object IN Objects` : aql`FOR object IN FULLTEXT("Objects", "name", ${query})`;
+      const layerFilter = filter.layers.length > 0 ? aql`FILTER object.layer IN ${filter.layers}` : aql``;
+      const typeFilter = filter.types.length > 0 ? aql`FILTER object.type IN ${filter.types}` : aql``;
+
       const aquery = aql`
         ${iteratorPart}
         ${layerFilter}
         ${typeFilter}
-        RETURN obj`;
+        LET documents = (
+          FOR v, document, p IN 1..1 OUTBOUND object
+          GRAPH "properties"
+          RETURN document
+        )
+        RETURN { object, documents }`;
       console.log(aquery)
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {
-            array.each((obj) => {
-              console.log(obj)
-              let node = view.nodes.find((x) => obj.id === x.id);
+            array.each(({ object, documents }: { object: {[key: string]: any}, documents: {[key: string]: any}[] }) => {
+              console.log(object, documents)
+              let node = view.nodes.find((x) => object.id === x.id);
               if (node === undefined) {
-                node = new ViewNode(view);
-                node.id = obj.id;
-                node.label = obj.name;
-                node.layer = obj.meta.category;
-                node.type = obj.meta.types[0];
-                node.shape = obj.meta.types[0];
-                node.width = 40;
-                node.height = 30;
+                node = object2Node(object, view);
+                addProperties(node, documents);
+                console.log(node)
                 view.nodes.push(node);
                 view.selection.push(node);
               }
@@ -61,7 +87,12 @@ class Api {
         GRAPH "objectRelations"
         ${relationFilter}
         ${typeFilter}
-        RETURN {source: DOCUMENT(${'Objects/' + source.id}), relation: e, target: v}
+        LET documents = (
+          FOR w, document IN 1..1 OUTBOUND v
+          GRAPH "properties"
+          RETURN document
+        )
+        RETURN {source: DOCUMENT(${'Objects/' + source.id}), relation: e, target: v, documents}
       `
       console.log(aquery)
       return this.db.query(aquery)
@@ -69,20 +100,14 @@ class Api {
           transaction(() => {
             array.each((result) => {
               console.log(result)
-              const { relation: r, target: t } = result;
+              const { relation: r, target: t, documents } = result;
               if (!t || !r) { // workaround for incomplete data
                 return;
               }
               let target = view.nodes.find((x) => t.id === x.id);
               if (target === undefined) {
-                target = new ViewNode(view);
-                target.id = t.id;
-                target.label = t.name;
-                target.layer = t.meta.category;
-                target.type = t.meta.types[0]
-                target.shape = t.meta.types[0];
-                target.width = 40;
-                target.height = 30;
+                target = object2Node(t, view);
+                addProperties(target, documents);
                 view.nodes.push(target);
                 view.selection.push(target);
               }
@@ -108,27 +133,26 @@ class Api {
         GRAPH "objectRelations"
         ${relationFilter}
         ${typeFilter}
-        RETURN {source: v, relation: e, target: DOCUMENT(${'Objects/' + target.id})}
+        LET documents = (
+          FOR w, document IN 1..1 OUTBOUND v
+          GRAPH "properties"
+          RETURN document
+        )
+        RETURN {source: v, documents, relation: e, target: DOCUMENT(${'Objects/' + target.id})}
       `
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {
             array.each((result) => {
               console.log(result)
-              const { source: s, relation: r } = result;
+              const { source: s, relation: r, documents } = result;
               if (!s || !r) { // workaround for incomplete data
                 return;
               }
               let source = view.nodes.find((x) => s.id === x.id);
               if (source === undefined) {
-                source = new ViewNode(view);
-                source.id = s.id;
-                source.label = s.name;
-                source.layer = s.meta.category;
-                source.type = s.meta.types[0];
-                source.shape = s.meta.types[0];
-                source.width = 40;
-                source.height = 30;
+                source = object2Node(s, view);
+                addProperties(source, documents);
                 view.nodes.push(source);
                 view.selection.push(source);
               }
@@ -160,48 +184,48 @@ class Api {
     loadAll: (view: GraphicalView) => Promise<void> =
     (view) => {
       const aquery = aql`
-      FOR v IN Objects
-        FOR v1, e, p IN 1..1 OUTBOUND v
+      FOR s IN Objects
+      LET sourceDocuments = (
+        FOR w, document IN 1..1 OUTBOUND s
+        GRAPH "properties"
+        RETURN document
+      )
+      FOR t, e, p IN 1..1 OUTBOUND s
         GRAPH 'objectRelations'
-          RETURN {source: v, relation: e, target: v1}
+        LET targetDocuments = (
+          FOR u, document IN 1..1 OUTBOUND t
+          GRAPH "properties"
+          RETURN document
+        )
+          RETURN {source: s, sourceDocuments, relation: e, target: t, targetDocuments}
       `
       console.log(aquery)
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {
             array.each((result) => {
-              const { source: s, relation: r, target: t } = result;
+              const { source: s, sourceDocuments, relation: r, target: t, targetDocuments } = result;
               let source = view.nodes.find((x) => s.id === x.id);
               if (source === undefined) {
-                source = new ViewNode(view);
-                source.id = s.id;
-                source.label = s.name;
-                source.layer = s.meta.category;
-                source.type = s.meta.types[0];
-                source.shape = s.meta.types[0];
-                source.width = 40;
-                source.height = 30;
+                source = object2Node(s, view);
+                addProperties(source, sourceDocuments);
                 view.nodes.push(source);
               }
-              let target = view.nodes.find((x) => t.id === x.id);
-              if (target === undefined) {
-                target = new ViewNode(view);
-                target.id = t.id;
-                target.label = t.name;
-                target.layer = t.meta.category;
-                target.type = t.meta.types[0];
-                target.shape = t.meta.types[0];
-                target.width = 40;
-                target.height = 30;
-                view.nodes.push(target);
-              }
-              let edge = view.edges.find((x) => r.id === x.id);
-              if (edge === undefined) {
-                edge = new ViewEdge(view, source, target);
-                edge.id = r.id;
-                edge.label = r.meta.types[1].replace('Relation', '');
-                edge.type = r.meta.types[1];
-                view.edges.push(edge);
+              if (t) {
+                let target = view.nodes.find((x) => t.id === x.id);
+                if (target === undefined) {
+                  target = object2Node(t, view);
+                  addProperties(target, targetDocuments);
+                  view.nodes.push(target);
+                }
+                let edge = view.edges.find((x) => r.id === x.id);
+                if (edge === undefined) {
+                  edge = new ViewEdge(view, source, target);
+                  edge.id = r.id;
+                  edge.label = r.meta.types[1].replace('Relation', '');
+                  edge.type = r.meta.types[1];
+                  view.edges.push(edge);
+                }
               }
             })
           })

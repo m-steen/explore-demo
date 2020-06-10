@@ -2,7 +2,7 @@ import React from 'react';
 import { observer } from 'mobx-react';
 import { autorun, observable, transaction } from 'mobx';
 import { Table } from 'react-bootstrap';
-import { GraphicalView, ViewNode } from '../graphics/model/view-model';
+import { GraphicalView, ViewNode, stringifyPropValue } from '../graphics/model/view-model';
 
 export class TableFilter {
   apply: (value: any) => boolean = (value) => true
@@ -41,9 +41,10 @@ export class GridModel {
     transaction(() => {
       const properties = this.view.nodes.reduce(
         (properties: string[], node: ViewNode) => {
-          return properties.concat(Object.keys(node).filter((key) => !properties.includes(key)))
+          return properties.concat(Object.keys(node.properties)
+            .filter((key) => !properties.includes(key) && stringifyPropValue(node.getProperty(key)) !== '' ))
         },
-        ['name']
+        []
       );
       this.columns.forEach((col) => {
         if (!properties.includes(col.key)) {
@@ -153,8 +154,9 @@ export const DataTable: React.FC<IDataTable> = observer((props) => {
         {rows.filter((row) => row.isVisible()).map((row, idx) =>
           <tr key={idx}>
             <td><input type='checkbox' id={idx.toString()} checked={row.isSelected()} onChange={toggleCheckbox} /></td>
-            {columns.filter((col) => true).map((col) =>
-              <td key={col.key}>{col.show && row.object? row.object.getProperty(col.key) : ''}</td>)}
+            {columns.filter((col) => true).map((col) => 
+              <td key={col.key}>{col.show && row.object ? stringifyPropValue(row.object.getProperty(col.key)) : ''}</td>
+            )}
           </tr>)}
       </tbody>
     </Table>

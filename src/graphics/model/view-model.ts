@@ -5,29 +5,70 @@ import Editor from '../editor';
 import { ForceLayout } from '../layout/force-layout';
 import { Menu } from './menu';
 
+export interface IProperty {
+  name: string;
+  type: string;
+  label: string;
+  value: any;
+}
+
+export type Money = { currency: string, amount: number };
+
+const numberFormatter = new Intl.NumberFormat(navigator.language, {
+  maximumFractionDigits: 2,
+});
+const dateFormatter = new Intl.DateTimeFormat(navigator.language);
+
+export const stringifyPropValue: (property: IProperty | undefined) => string = (property) => {
+  if (property === undefined) {
+    return '';
+  }
+  const type = property.type;
+  console.log(type, property.value)
+  switch (type) {
+    case "boolean":
+      return property.value as boolean ? '✔️' : '❌';
+    case "number":
+      return numberFormatter.format(property.value as number);
+    case "string":
+      return property.value as string;
+    case "date":
+      return dateFormatter.format(property.value as number);
+    case "money":
+    case "MetricMoney":
+      const currencyFormatter = new Intl.NumberFormat(navigator.language, {
+        style: 'currency',
+        currency: (property.value as Money).currency
+      });
+      return currencyFormatter.format((property.value as Money).amount);
+
+    default:
+      if (property.value && Object.keys(property.value).includes('name')) {
+        return property.value.name;
+      }
+      return property.value?.toString() || '';
+  }
+}
+
 export class ViewElement {
   id: string = '';
   label: string = '';
   type: string = '';
   view: GraphicalView;
+  properties: { [key: string]: IProperty } = {};
 
   constructor(view: GraphicalView) {
     this.view = view;
   }
 
   getProperty = (name: string) => {
-    const property = Object.entries(this).find(([key, value]) => name === key);
+    const property = Object.entries(this.properties).find(([key, value]) => name === key);
     if (property) {
-      const type = typeof(property[1]);
-      if (type !== 'object' && type !== 'function') {
-        return property[1];
-      } else {
-        return undefined;
-      }
+      return property[1];
     } else {
       return undefined;
     }
-  }
+ }
 
 }
 
