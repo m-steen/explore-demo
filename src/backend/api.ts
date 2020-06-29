@@ -28,9 +28,9 @@ function addProperties(node: ViewNode, documents: {[key: string]: any}[]) {
 }
 
 class Api {
-  url: string = 'http://localhost:8529';
-  username: string = 'root';
-  password: string = 'openSesame';
+  url: string = 'http://big.bizzdesign.io:8529';
+  username: string = 'maarten';
+  password: string = 'uAXTUAf8WW4Uk5zjpwfN7SE5h6a';
   database: string = 'repo';
   db: Database;
 

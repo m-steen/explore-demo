@@ -6,15 +6,15 @@ using logging for Connection.doc.connector.logging;
 function getAuthentication()
 {
 //	return Structure("type", "None");
-	auth = Structure("type", "None");
+	auth = Structure("type", "Basic");
 	auth.add("username", "root");
-	auth.add("password", "openSesame");
+	auth.add("password", "3FY62QwBppAXThGmmDM5DMQ9wJq");
 	return auth;
 }
 
 function getSettings() {
 	settings = Structure();
-	settings.add("serverUrl", "http://localhost:8529");
+	settings.add("serverUrl", "http://graph.msteen.bizzdesign.io:8529");
 	settings.add("database", "repo");
 	settings.add("auth", getAuthentication());
 	return settings;
@@ -701,6 +701,11 @@ function getHeaders()
 		"if-modified-since", "Sat, 1 Jan 2000 00:00:00 GMT");
 }
 
+function btoa(text) {
+	b = InternalObject("client").utils().toBase64(text);
+	return b;
+}
+
 function request(method, path, body, byref status, byref response)
 {
 	httpObject = getHTTPObject();
@@ -715,7 +720,7 @@ function request(method, path, body, byref status, byref response)
 	username = doAuth && auth.type == "Basic" ? auth.username : undefined;
 	password = doAuth && auth.type == "Basic" ? auth.password : undefined;
 
-	logging:writeToDebugLog("HTTP " + method + " " + url);
+	logging:writeToDebugLog("HTTP " + method + " " + url + " " + username);
 
 	// Open connection
 	//
@@ -737,6 +742,7 @@ function request(method, path, body, byref status, byref response)
 	}
 
 	headers = getHeaders();
+	headers.add("Authorization", "Basic " + btoa(username + ":" + password));
 	forall headerName, headerValue in headers
 	{
 		httpObject.setRequestHeader(headerName, headerValue);
