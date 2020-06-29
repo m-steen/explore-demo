@@ -14,6 +14,7 @@ import { SearchForm } from './components/SearchForm';
 import { ExpandForm } from './components/ExpandMenu';
 import { FilterForm } from './components/FilterForm';
 import { DataTable } from './components/PropertyTable';
+import { PropertySheet } from './components/PropertySheet';
 
 
 @observer
@@ -48,6 +49,9 @@ class App extends React.Component {
               </Tab>
               <Tab eventKey="filter" title="Filter">
                 <FilterForm appState={this.appState} onSubmit={this.onApplyFilter} />
+              </Tab>
+              <Tab eventKey="properties" title="Properties">
+                <PropertySheet model={this.appState.view} />
               </Tab>
               <Tab eventKey='more' title='More'>
                 <ButtonGroup vertical>
