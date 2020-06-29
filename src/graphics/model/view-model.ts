@@ -4,15 +4,8 @@ import Ticker from '../tools/ticker';
 import Editor from '../editor';
 import { ForceLayout } from '../layout/force-layout';
 import { Menu } from './menu';
-
-export interface IProperty {
-  name: string;
-  type: string;
-  label: string;
-  value: any;
-}
-
-export type Money = { currency: string, amount: number };
+import { MObject } from '../../tmf/model';
+import { IProperty, Structure, Money } from '../../tmf/properties';
 
 const numberFormatter = new Intl.NumberFormat(navigator.language, {
   maximumFractionDigits: 2,
@@ -43,23 +36,16 @@ export const stringifyPropValue: (property: IProperty | undefined) => string = (
       return currencyFormatter.format((property.value as Money).amount);
 
     default:
-      if (property.value && Object.keys(property.value).includes('name')) {
-        return property.value.name;
+      if (property.value instanceof Object && Object.keys(property.value).includes('name')) {
+        return (property.value as Structure).name as string;
       }
       return property.value?.toString() || '';
   }
 }
 
-export class ViewElement {
-  id: string = '';
-  label: string = '';
-  type: string = '';
-  view: GraphicalView;
-  properties: { [key: string]: IProperty } = {};
-
-  constructor(view: GraphicalView) {
-    this.view = view;
-  }
+export class ViewElement extends MObject {
+  view: GraphicalView | undefined = undefined;
+  @computed get label(): string { return this.getProperty('nm')?.value as string; };
 
   getProperty = (name: string) => {
     const property = Object.entries(this.properties).find(([key, value]) => name === key);
@@ -69,7 +55,6 @@ export class ViewElement {
       return undefined;
     }
  }
-
 }
 
 export class ViewNode extends ViewElement {
@@ -81,7 +66,7 @@ export class ViewNode extends ViewElement {
   shape: string = '';
 
   delete = () => {
-    if (this.view.nodes.includes(this)) {
+    if (this.view && this.view.nodes.includes(this)) {
       this.view.edges.filter((edge) => edge.source === this || edge.target === this)
         .forEach((edge) => edge.delete());
       console.log('deleting node: ' + this.label)
@@ -93,12 +78,12 @@ export class ViewNode extends ViewElement {
   }
 
   @computed get isPrimarySelection() {
-    const { selection } = this.view;
+    const selection = this.view?.selection || [];
     return selection.length > 0 && selection[0] === this;
   }
 
   @computed get isSelected() {
-    return this.view.selection.includes(this);
+    return this.view?.selection.includes(this) || false;
   }
 
 }
@@ -107,14 +92,14 @@ export class ViewEdge extends ViewElement {
   source: ViewNode;
   target: ViewNode;
 
-  constructor(view: GraphicalView, source: ViewNode, target: ViewNode) {
-    super(view);
+  constructor(type: string, source: ViewNode, target: ViewNode, name?: string, id?: string) {
+    super(type, name, id);
     this.source = source;
     this.target = target;
   }
 
   delete = () => {
-    if (this.view.edges.includes(this)) {
+    if (this.view && this.view.edges.includes(this)) {
       if (this.view.selection.includes(this)) {
         this.view.selection.splice(this.view.selection.indexOf(this), 1);
       }
@@ -176,6 +161,20 @@ export class GraphicalView {
       this.y = 0;
       this.w = 1140;
     })
+  }
+
+  @action
+  addNode = (node: ViewNode) => {
+    node.view = this;
+    this.nodes.push(node);
+    return node;
+  }
+
+  @action
+  addEdge = (edge: ViewEdge) => {
+    edge.view = this;
+    this.edges.push(edge);
+    return edge;
   }
 
   @action

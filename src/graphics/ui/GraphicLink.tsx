@@ -27,24 +27,24 @@ class GraphicLink extends React.Component<IGraphicLink> {
 
   isPrimarySelection = () => {
     const { edge } = this.props;
-    const { selection } = edge.view;
+    const selection = edge.view?.selection || [];
     return selection.length > 0 && selection[0] === edge;
   }
 
   isSelected = () => {
     const { edge } = this.props;
-    return edge.view.selection.includes(edge);
+    return edge.view?.selection.includes(edge) || false;
   }
 
   handleClick = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
     const { edge } = this.props;
     if (!e.shiftKey) {
       transaction(() => {
-        edge.view.clearSelection();
-        edge.view.selectElement(edge);
+        edge.view?.clearSelection();
+        edge.view?.selectElement(edge);
         });
     } else {
-      edge.view.toggleSelection(edge);
+      edge.view?.toggleSelection(edge);
     }
     e.stopPropagation();
   }

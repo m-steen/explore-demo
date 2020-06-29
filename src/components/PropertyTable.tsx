@@ -25,7 +25,7 @@ export class TableRow {
 
   constructor(public object: ViewNode) {
     this.isSelected = () => this.object ? (this.object as ViewNode).isSelected : false;
-    this.toggleSelection = () => this.object ? this.object.view.toggleSelection(this.object) : {};
+    this.toggleSelection = () => this.object.view?.toggleSelection(this.object);
   }
 }
 

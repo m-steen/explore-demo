@@ -1,29 +1,15 @@
 import { transaction } from 'mobx';
 import { Database, aql } from 'arangojs';
-import { v4 as uuid } from 'uuid';
 import { GraphicalView, ViewNode, ViewEdge } from '../graphics/model/view-model';
 import { Filter } from '../model/application';
+import { IObject, IRelation, IDocument } from '../tmf/model';
 
-function object2Node(object: {[key: string]: any}, view: GraphicalView) {
-  const node = new ViewNode(view);
-  node.id = object.id;
-  node.label = object.name;
+function object2Node(object: IObject, view: GraphicalView) {
+  const node = new ViewNode(object.type, object.name, object.id);
   node.layer = object.layer;
-  node.type = object.type;
   node.shape = object.type;
   node.width = 40;
   node.height = 30;
-  return node;
-}
-
-function addProperties(node: ViewNode, documents: {[key: string]: any}[]) {
-  let properties: {[key: string]: any} = {};
-  documents.forEach((doc: {[key: string]: any}) => {
-    Object.keys(doc).forEach((key) => {
-      properties[key] = doc[key];
-    })
-  });
-  node.properties = properties;
   return node;
 }
 
@@ -63,14 +49,14 @@ class Api {
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {
-            array.each(({ object, documents }: { object: {[key: string]: any}, documents: {[key: string]: any}[] }) => {
+            array.each(({ object, documents }: { object: IObject, documents: IDocument[] }) => {
               console.log(object, documents)
               let node = view.nodes.find((x) => object.id === x.id);
               if (node === undefined) {
                 node = object2Node(object, view);
-                addProperties(node, documents);
+                documents.forEach((doc) => Object.keys(doc).forEach((name) => node?.setProperty(name, doc[name])));
                 console.log(node)
-                view.nodes.push(node);
+                view.addNode(node);
                 view.selection.push(node);
               }
             })
@@ -98,7 +84,7 @@ class Api {
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {
-            array.each((result) => {
+            array.each((result: { relation: IRelation, target: IObject, documents: IDocument[] }) => {
               console.log(result)
               const { relation: r, target: t, documents } = result;
               if (!t || !r) { // workaround for incomplete data
@@ -107,17 +93,14 @@ class Api {
               let target = view.nodes.find((x) => t.id === x.id);
               if (target === undefined) {
                 target = object2Node(t, view);
-                addProperties(target, documents);
-                view.nodes.push(target);
+                documents.forEach((doc) => Object.keys(doc).forEach((name) => target?.setProperty(name, doc[name])));
+                view.addNode(target);
                 view.selection.push(target);
               }
               let edge = view.edges.find((x) => r.id === x.id);
               if (edge === undefined) {
-                edge = new ViewEdge(view, source, target);
-                edge.id = r.id;
-                edge.label = r.meta.types[1].replace('Relation', '');
-                edge.type = r.meta.types[1];
-                view.edges.push(edge);
+                edge = new ViewEdge(r.type, source, target, r.type.replace('Relation', ''), r.id);
+                view.addEdge(edge);
               }
             })
           })
@@ -143,7 +126,7 @@ class Api {
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {
-            array.each((result) => {
+            array.each((result: { source: IObject, documents: IDocument[], relation: IRelation }) => {
               console.log(result)
               const { source: s, relation: r, documents } = result;
               if (!s || !r) { // workaround for incomplete data
@@ -152,17 +135,14 @@ class Api {
               let source = view.nodes.find((x) => s.id === x.id);
               if (source === undefined) {
                 source = object2Node(s, view);
-                addProperties(source, documents);
-                view.nodes.push(source);
+                documents.forEach((doc) => Object.keys(doc).forEach((name) => source?.setProperty(name, doc[name])));
+                view.addNode(source);
                 view.selection.push(source);
               }
               let edge = view.edges.find((x) => r.id === x.id);
               if (edge === undefined) {
-                edge = new ViewEdge(view, source, target);
-                edge.id = r.id;
-                edge.label = r.meta.types[1].replace('Relation', '');
-                edge.type = r.meta.types[1];
-                view.edges.push(edge);
+                edge = new ViewEdge(r.type, source, target, r.type.replace('Relation', ''), r.id);
+                view.addEdge(edge);
               }
             })
           })
@@ -203,28 +183,25 @@ class Api {
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {
-            array.each((result) => {
+            array.each((result: { source: IObject, sourceDocuments: IDocument[], relation: IRelation, target: IObject, targetDocuments: IDocument[]}) => {
               const { source: s, sourceDocuments, relation: r, target: t, targetDocuments } = result;
               let source = view.nodes.find((x) => s.id === x.id);
               if (source === undefined) {
                 source = object2Node(s, view);
-                addProperties(source, sourceDocuments);
-                view.nodes.push(source);
+                sourceDocuments.forEach((doc) => Object.keys(doc).forEach((name) => source?.setProperty(name, doc[name])));
+                view.addNode(source);
               }
               if (t) {
                 let target = view.nodes.find((x) => t.id === x.id);
                 if (target === undefined) {
                   target = object2Node(t, view);
-                  addProperties(target, targetDocuments);
-                  view.nodes.push(target);
+                  targetDocuments.forEach((doc) => Object.keys(doc).forEach((name) => target?.setProperty(name, doc[name])));
+                  view.addNode(target);
                 }
                 let edge = view.edges.find((x) => r.id === x.id);
                 if (edge === undefined) {
-                  edge = new ViewEdge(view, source, target);
-                  edge.id = r.id;
-                  edge.label = r.meta.types[1].replace('Relation', '');
-                  edge.type = r.meta.types[1];
-                  view.edges.push(edge);
+                  edge = new ViewEdge(r.type, source, target, r.type.replace('Relation', ''), r.id);
+                  view.addEdge(edge);
                 }
               }
             })
@@ -237,42 +214,32 @@ class Api {
     return new Promise((resolve) => {
 
       transaction(() => {
-        const n1 = new ViewNode(view);
-        n1.label = 'First Element';
-        n1.id = uuid();
+        const n1 = new ViewNode('Node', 'First Element');
         n1.x = 300;
         n1.y = 200;
         n1.width = 40;
         n1.height = 30;
-        view.nodes.push(n1);
+        view.addNode(n1);
   
-        const n2 = new ViewNode(view);
-        n2.label = 'Second Element';
-        n2.id = uuid();
+        const n2 = new ViewNode('Node', 'Second Element');
         n2.x = 600;
         n2.y = 400;
         n2.width = 40;
         n2.height = 30;
-        view.nodes.push(n2);
+        view.addNode(n2);
   
-        const n3 = new ViewNode(view);
-        n3.label = 'Third Element';
-        n3.id = uuid();
+        const n3 = new ViewNode('Node', 'Third Element');
         n3.x = 500;
         n3.y = 300;
         n3.width = 40;
         n3.height = 30;
-        view.nodes.push(n3);
+        view.addNode(n3);
   
-        const e1 = new ViewEdge(view, n1, n2);
-        e1.label = 'relation';
-        e1.id = uuid();
-        view.edges.push(e1);
+        const e1 = new ViewEdge('Relation', n1, n2, 'relation');
+        view.addEdge(e1);
   
-        const e2 = new ViewEdge(view, n1, n3);
-        e2.label = 'relation';
-        e2.id = uuid();
-        view.edges.push(e2);
+        const e2 = new ViewEdge('Relation', n1, n3, 'relation');
+        view.addEdge(e2);
       })
 
       resolve();

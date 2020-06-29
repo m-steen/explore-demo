@@ -29,10 +29,10 @@ class GraphicNode extends React.Component<IGraphicNode> {
   handleClick = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
     const { node } = this.props;
     if (!e.shiftKey) {
-      node.view.clearSelection();
-      node.view.selectElement(node);
+      node.view?.clearSelection();
+      node.view?.selectElement(node);
     } else {
-      node.view.toggleSelection(node);
+      node.view?.toggleSelection(node);
     }
     e.stopPropagation();
   }
@@ -41,7 +41,7 @@ class GraphicNode extends React.Component<IGraphicNode> {
     e.preventDefault();
     const { node } = this.props;
     const view = node.view;
-    if (view.selection.includes(node)) {
+    if (view?.selection.includes(node)) {
       view.layout.stop();
       if (view.contextMenuActiveFor === null) {
         view.contextMenuActiveFor = node.id;
@@ -50,9 +50,11 @@ class GraphicNode extends React.Component<IGraphicNode> {
       }
     }
     else {
-      view.clearSelection();
-      view.selectElement(node);
-      view.contextMenuActiveFor = node.id;
+      if (view) {
+        view.clearSelection();
+        view.selectElement(node);
+        view.contextMenuActiveFor = node.id;
+      }
     }
     e.stopPropagation();
   }
@@ -64,8 +66,8 @@ class GraphicNode extends React.Component<IGraphicNode> {
   handleDrag: DraggableEventHandler = (e, data) => {
     const { node } = this.props;
     transaction(() => {
-      node.x += data.deltaX / node.view.zoom;
-      node.y += data.deltaY / node.view.zoom;
+      node.x += data.deltaX / (node.view?.zoom || 1);
+      node.y += data.deltaY / (node.view?.zoom || 1);
     })
     e.stopPropagation();
   }
@@ -73,7 +75,7 @@ class GraphicNode extends React.Component<IGraphicNode> {
 
 const GraphicShape: React.FC<{ node: ViewNode }> = observer((props) => {
   const { node } = props;
-  const fillColor = node.view.nodeColor(node);
+  const fillColor = node.view?.nodeColor(node);
   const strokeColor = node.isPrimarySelection ? 'chartreuse' : node.isSelected ? 'blue' : 'grey';
   const style: React.CSSProperties = { stroke: strokeColor, strokeWidth: 2, fill: fillColor };
   if (node.shape) {
