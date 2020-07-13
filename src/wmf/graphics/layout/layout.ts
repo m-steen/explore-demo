@@ -1,5 +1,5 @@
-import { GraphicalView } from "../model/view-model";
-import { observable, when } from "mobx";
+import { observable, when } from 'mobx';
+import { ViewModel } from '../../model/view-model';
 
 export interface ILayout {
 
@@ -10,25 +10,26 @@ export interface ILayout {
 }
 
 export class BaseLayout {
+
   @observable protected isLayouting = false;
 
-  constructor(protected view: GraphicalView) {}
+  constructor(protected view: ViewModel) {
+  }
 
   apply() {
-    console.log('Apply layout')
     this.start();
     return when(() => !this.isLayouting);
   };
 
   private start() {
     console.log('Start layout')
-    this.view.ticker.registerAction('layout', this.update);
+    this.view.getEditor().ticker.registerAction('layout', this.update);
     this.isLayouting = true;
   };
 
   stop() {
     console.log('Stop layout')
-    this.view.ticker.unregisterAction('layout');
+    this.view.getEditor().ticker.unregisterAction('layout');
     this.isLayouting = false;
   };
 

@@ -1,16 +1,15 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+// import ReactDOM from 'react-dom';
 import { observer } from 'mobx-react-lite';
 import { PropertyEditor } from './PropertyEditor';
+import { IProperty } from '../model/properties';
+import { MModel } from '../model/model';
+import Editor from '../editor/editor';
 // import { useDrag, DragObjectWithType } from 'react-dnd';
-import { MObject } from '../tmf/model';
-import { IProperty } from '../tmf/properties';
 
-interface ObjectTableProps {
-  model: {
-    nodes: MObject[],
-    selection: MObject[],
-  }
+interface PropertySheetProps {
+  model: MModel,
+  editor: Editor,
 }
 
 
@@ -58,24 +57,26 @@ const DraggableProperty: React.FC<{ property: IProperty }> = (props) => {
   )
 }
 
-export const PropertySheet: React.FC<ObjectTableProps> = observer((props) => {
-  const { selection } = props.model;
+export const PropertySheet: React.FC<PropertySheetProps> = observer((props) => {
+  const { selection } = props.editor;
+  const { objects, relations } = props.model;
+  const selectedObjects = (objects.concat(relations)).filter((obj) => selection.includes(obj.id));
   let properties: IProperty[] = selection.length > 0 ? [
     {
       name: 'id',
       label: 'ID',
       type: 'string',
-      value: selection[0].id,
+      value: selectedObjects[0].id,
     },
     {
       name: 'nm',
       label: 'Name',
       type: 'string',
-      value: selection[0].name,
+      value: selectedObjects[0].name,
     },
   ]
   : [];
-  selection.forEach((obj) => {
+  selectedObjects.forEach((obj) => {
     obj.getProperties().forEach((property) => {
       const existingProperty = properties.find((p) => p.name === property.name);
       if (!existingProperty) {

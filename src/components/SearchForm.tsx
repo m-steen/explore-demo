@@ -3,7 +3,7 @@ import { observer } from 'mobx-react';
 import { Form, InputGroup, Button, FormProps } from 'react-bootstrap';
 import Application from '../model/application';
 import Select, { ValueType, ActionMeta } from 'react-select';
-import { CommandButton, Command } from './CommandButton';
+import { CommandButton, Command } from '../wmf/components/CommandButton';
 
 export interface ISearchForm extends FormProps {
   appState: Application;

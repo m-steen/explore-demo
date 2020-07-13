@@ -45,7 +45,6 @@ export class ForceLayout extends BaseLayout implements ILayout {
   }
 
   update = () => {
-    // console.log('Update Force layout', this.simulation.alpha())
     this.simulation.tick();
     transaction(() => {
       this.simulation.nodes().forEach((n: d3Node) => {

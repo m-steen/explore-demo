@@ -1,8 +1,9 @@
 import { observable } from 'mobx';
-import Editor from '../graphics/editor';
-import { ViewNode } from '../graphics/model/view-model';
-import { Menu, MenuOption } from '../graphics/model/menu';
-import { Command } from '../components/CommandButton';
+import { Menu, MenuOption } from '../wmf/editor/menu';
+import { Command } from '../wmf/components/CommandButton';
+import Editor from '../wmf/editor/editor';
+import ArangoRepository from '../wmf/repository/arango-repository';
+import { ViewNode } from '../wmf/model/view-model';
 
 const colorScheme: Map<string, string> = new Map([
   ['Strategy', '#FFC685'],
@@ -123,8 +124,19 @@ class Application extends Editor {
   @observable filter: Filter = { layers: [], types: [], relations: [], outgoing: true, incoming: false };
 
   constructor(title: string = '') {
-    super();
+    super(new ArangoRepository());
     this.title = title;
+    this.repository.setUrl('http://big.bizzdesign.io:8529');
+    this.repository.login('maarten', 'uAXTUAf8WW4Uk5zjpwfN7SE5h6a')
+    .then((result) => {
+      if (result === 'success') {
+        if (this.repository.selectDatabase('repo')) {
+          console.log('Database selected')
+        } else {
+          console.log('Failed to select database')
+        }
+      }
+    });
 
     this.view.nodeColor = (node: ViewNode) => {
       const color = colorScheme.get(node.layer);
@@ -135,21 +147,21 @@ class Application extends Editor {
     this.view.nodeMenu = () => {
       const menu = new Menu<ViewNode>();
       const expandOutgoingAction: Command = (node: ViewNode) => {
-        this.view.clearSelection();
-        return this.api.getRelationsFrom(node, this.filter, this.view).then(() => this.view.layout.apply());
+        this.clearSelection();
+        return this.repository.getRelationsFrom(node, this.filter, this.view).then(() => this.view.layout.apply());
       }
       const expandOutgoing = new MenuOption('Expand outgoing relations', expandOutgoingAction);
       menu.options.push(expandOutgoing);
       const expandIncomingAction: Command = (node: ViewNode) => {
-        this.view.clearSelection();
-        return this.api.getRelationsTo(node, this.filter, this.view).then(() => this.view.layout.apply());
+        this.clearSelection();
+        return this.repository.getRelationsTo(node, this.filter, this.view).then(() => this.view.layout.apply());
       }
       const expandIncoming = new MenuOption('Expand incoming relations', expandIncomingAction);
       menu.options.push(expandIncoming);
       const expandAllAction: Command = (node: ViewNode) => {
-        this.view.clearSelection();
-        return this.api.getRelationsFrom(node, this.filter, this.view)
-          .then(() => this.api.getRelationsTo(node, this.filter, this.view))
+        this.clearSelection();
+        return this.repository.getRelationsFrom(node, this.filter, this.view)
+          .then(() => this.repository.getRelationsTo(node, this.filter, this.view))
           .then(() => this.view.layout.apply());
       }
       const expandAll = new MenuOption('Expand all relations', expandAllAction);

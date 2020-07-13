@@ -1,6 +1,6 @@
 import React from 'react';
 import { observer } from 'mobx-react-lite';
-import { IProperty, Money } from '../tmf/properties';
+import Property, { IProperty, Money, ValueType } from '../model/properties';
 
 interface PropertyEditorProps {
   property: IProperty,
@@ -28,9 +28,17 @@ function stringifyPropValue(property: IProperty): string {
         currency: (property.value as Money).currency
       });
       return currencyFormatter.format((property.value as Money).amount);
-
-    default:
+    
+    default: {
+      if (Property.isCollectionType(property.type)) {
+        const elementType = property.type[0];
+        return (property.value as ValueType[]).map((val) => stringifyPropValue(new Property('element', 'element', elementType, val))).join(', ');
+      }
+      if (Property.isEnum(property.value)) {
+        return property.value.name;
+      }
       return property.value?.toString() || '';
+    }
   }
 }
 

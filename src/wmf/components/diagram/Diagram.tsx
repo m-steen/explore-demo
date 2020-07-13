@@ -1,20 +1,20 @@
 import React from 'react';
 import { transaction, observable } from 'mobx';
 import { observer } from 'mobx-react';
-import { Position } from '../model/graphics';
-import { GraphicalView, ViewNode, ViewElement } from '../model/view-model';
-import GraphicNode from './GraphicNode';
-import GraphicLink from './GraphicLink';
+import { Position, Size } from '../../graphics/graphics';
+import { ViewModel, ViewNode, ViewEdge, EdgeSegment } from '../../model/view-model';
+import DiagramNode from './DiagramNode';
+import DiagramLink from './DiagramLink';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import { ZoomIn, ZoomOut, ZoomOutMap } from '@material-ui/icons';
-import { Button, ButtonGroup } from 'react-bootstrap';
+import { ButtonGroup, Button } from 'react-bootstrap';
 
-export interface ICanvas {
-  view: GraphicalView;
+export interface DiagramProps {
+  view: ViewModel;
 }
 
 @observer
-class Canvas extends React.Component<ICanvas> {
+class Diagram extends React.Component<DiagramProps> {
   canvas: HTMLDivElement | null = null; 
   @observable lassoToolActive = false;
   @observable lassoToolOrigin = { x: 0, y: 0 };
@@ -22,11 +22,13 @@ class Canvas extends React.Component<ICanvas> {
 
   componentDidMount() {
     const { view } = this.props;
-    view.absoluteX = calculateOffset(this.canvas, 'offsetLeft');
-    view.absoluteY = calculateOffset(this.canvas, 'offsetTop');
-    view.absoluteW = this.canvas?.offsetWidth ?? view.absoluteW;
-    view.absoluteH = this.canvas?.offsetHeight ?? view.absoluteH;
-
+    view.origin = new Position(
+      calculateOffset(this.canvas, 'offsetLeft'), 
+      calculateOffset(this.canvas, 'offsetTop'));
+    view.size = new Size(
+      this.canvas?.offsetWidth ?? view.size.width,
+      this.canvas?.offsetHeight ?? view.size.height
+    );
     // workaround for Chrome removing preventDefault from wheel events
     if (this.canvas) {
       this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
@@ -41,26 +43,28 @@ class Canvas extends React.Component<ICanvas> {
 
   componentDidUpdate() {
     const { view } = this.props;
-    view.absoluteX = calculateOffset(this.canvas, 'offsetLeft');
-    view.absoluteY = calculateOffset(this.canvas, 'offsetTop');
-    view.absoluteW = this.canvas?.offsetWidth ?? view.absoluteW;
-    view.absoluteH = this.canvas?.offsetHeight ?? view.absoluteH;
+    view.origin = new Position(
+      calculateOffset(this.canvas, 'offsetLeft'), 
+      calculateOffset(this.canvas, 'offsetTop'));
+    view.size = new Size(
+      this.canvas?.offsetWidth ?? view.size.width,
+      this.canvas?.offsetHeight ?? view.size.height
+    );
   }
 
   render() {
     const { view } = this.props;
-    const { x, y, w, h } = view;
-    const viewPort = [x, y, w, h].join(' ');
-    const style: React.CSSProperties = { };
+    const viewPort = view.viewport.join(' ');
+    const style: React.CSSProperties = {};
     return (
       <div style={{ width: '100%' }}>
         <div id='Canvas' ref={ref => this.canvas = ref} style={style}
           onClick={this.handleClick}
-           >
+        >
           <DraggableCore onStart={this.handleDragStart} onDrag={this.handleDrag} onStop={this.handleDragStop} >
             <svg viewBox={viewPort} >
-              {view.edges.map((edge) => <GraphicLink key={edge.id} edge={edge} />)}
-              {view.nodes.map((node) => <GraphicNode key={node.id} node={node} />)}
+              {view.edges.map((edge) => <DiagramLink key={(edge instanceof EdgeSegment) ? edge.id + edge.target.id : edge.id} edge={edge} />)}
+              {view.nodes.map((node) => <DiagramNode key={node.id} node={node} />)}
               <LassoTool view={view} active={this.lassoToolActive} origin={this.lassoToolOrigin} maxim={this.lassoToolMaxim} />
             </svg>
           </DraggableCore>
@@ -81,44 +85,38 @@ class Canvas extends React.Component<ICanvas> {
       this.lassoToolActive = false;
     } else {
       const { view } = this.props;
-      view.clearSelection();
+      view.getEditor().clearSelection();
     }
     e.stopPropagation();
   }
 
   onWheel = (e: WheelEvent) => {
     e.preventDefault();
+    const { view } = this.props;
     if (e.altKey) {
-      const { view } = this.props;
-      const zoomfactor = e.deltaY / 30;
-      view.x -= zoomfactor * 4;
-      view.y -= zoomfactor * 3;
-      view.w += zoomfactor * 8;
+      const zoomBy = -e.deltaY / 30;
+      view.zoom(zoomBy);
     } else {
-      this.props.view.y += e.deltaY / 5;
+      view.pan(0, e.deltaY / 5);
     }
   }
 
-  increaseZoom = (view: GraphicalView) => {
-    view.x += 40;
-    view.y += 30;
-    view.w -= 80;
+  increaseZoom = (view: ViewModel) => {
+    view.zoom(40);
   }
 
-  decreaseZoom = (view: GraphicalView) => {
-    view.x -= 40;
-    view.y -= 30;
-    view.w += 80;
+  decreaseZoom = (view: ViewModel) => {
+    view.zoom(-40);
   }
 
   handleDragStart: DraggableEventHandler = (e, data) => {
-    if (e.shiftKey && this.props.view.selection.length === 0) {
-      const { view } = this.props;
-      view.clearSelection();
-      const offsetLeft = view.absoluteX // calculateOffset(this.canvas, 'offsetLeft');
-      const offsetTop = view.absoluteY // calculateOffset(this.canvas, 'offsetTop');
-      const x = (data.x - offsetLeft) / view.zoom + view.x;
-      const y = (data.y - offsetTop) / view.zoom + view.y;
+    const { view } = this.props;
+    if (e.shiftKey && view.getEditor().isSelectionEmpty()) {
+      view.getEditor().clearSelection();
+      const offsetLeft = view.origin.x // calculateOffset(this.canvas, 'offsetLeft');
+      const offsetTop = view.origin.y // calculateOffset(this.canvas, 'offsetTop');
+      const x = (data.x - offsetLeft) / view.zoomFactor + view.x;
+      const y = (data.y - offsetTop) / view.zoomFactor + view.y;
       this.lassoToolOrigin = { x, y };
       this.lassoToolMaxim = { x, y };
       this.lassoToolActive = true;
@@ -127,7 +125,7 @@ class Canvas extends React.Component<ICanvas> {
   }
 
   handleDrag: DraggableEventHandler = (e, data) => {
-    const { zoom } = this.props.view;
+    const { zoomFactor: zoom } = this.props.view;
     if (this.lassoToolActive) {
       transaction(() => {
         this.lassoToolMaxim.x += data.deltaX / zoom;
@@ -135,9 +133,7 @@ class Canvas extends React.Component<ICanvas> {
       })
     } else {
       const { view } = this.props;
-      if (view.selection.length > 0) {
-        view.clearSelection();
-      }
+      view.getEditor().clearSelection();
       transaction(() => {
         view.x -= data.deltaX / zoom;
         view.y -= data.deltaY / zoom;
@@ -154,21 +150,20 @@ class Canvas extends React.Component<ICanvas> {
       const minY = Math.min(this.lassoToolOrigin.y, this.lassoToolMaxim.y);
       const maxX = Math.max(this.lassoToolOrigin.x, this.lassoToolMaxim.x);
       const maxY = Math.max(this.lassoToolOrigin.y, this.lassoToolMaxim.y);
-      view.selection = (view.nodes.filter((n) => (minX < n.x && n.x < maxX) && (minY < n.y && n.y < maxY)) as ViewElement[])
-        .concat(view.edges.filter((e) => 
+      const selection: string[] = (view.nodes.filter((n) => (minX < n.x && n.x < maxX) && (minY < n.y && n.y < maxY)) as ViewNode[]).map((e) => e.id)
+        .concat((view.edges.filter((e) => 
           (minX < Math.min(e.source.x, e.target.x) && Math.max(e.source.x, e.target.x) < maxX) && 
-          (minY < Math.min(e.source.y, e.target.y) && Math.max(e.source.y, e.target.y) < maxY)) as ViewElement[]);
+          (minY < Math.min(e.source.y, e.target.y) && Math.max(e.source.y, e.target.y) < maxY)) as ViewEdge[]).map((e) => e.id));
+          view.getEditor().setSelection(selection);
       e.stopPropagation();
     }
   }
 }
 
 interface IZoomControls {
-  view: GraphicalView;
-  // left: number;
-  // top: number;
-  onPlus: (view: GraphicalView) => void;
-  onMinus: (view: GraphicalView) => void;
+  view: ViewModel;
+  onPlus: (view: ViewModel) => void;
+  onMinus: (view: ViewModel) => void;
   onZoomToFit: () => void;
 }
 
@@ -185,24 +180,21 @@ const ZoomControls: React.FC<IZoomControls> = observer((props) => {
   )
 })
 
-const ContextMenu: React.FC<{ view: GraphicalView}> = observer((props) => {
+const ContextMenu: React.FC<{ view: ViewModel}> = observer((props) => {
   const { view } = props;
   if (view.contextMenuActiveFor === null) {
     return null;
   }
-  const element = view.selection.find((n: ViewElement) => view.contextMenuActiveFor === n.id);
-  if (!(element instanceof ViewNode)) {
+  const node = view.nodes.find((node) => node.id === view.contextMenuActiveFor && node.isSelected);
+  if (!node) {
     return null;
   }
-  const node = element;
-  const x = (node.x + node.width + 10 - view.x) * view.zoom;
-  const y = (node.y - view.y) * view.zoom;
+  const x = (node.x + node.width + 10 - view.x) * view.zoomFactor;
+  const y = (node.y - view.y) * view.zoomFactor;
 
   const nodeMenu = view.nodeMenu();
   const options = nodeMenu.options.map((option) => {
-    const action = () => view.selection
-      .filter((n) => n instanceof ViewNode)
-      .map((n) => n as ViewNode)
+    const action = () => view.nodes.filter((node) => node.isSelected)
       .forEach((n: ViewNode) => option.action(n))
     return { label:option.label, action: action };
   })
@@ -218,14 +210,14 @@ const ContextMenu: React.FC<{ view: GraphicalView}> = observer((props) => {
   );
 })
 
-const LassoTool: React.FC<{ view: GraphicalView, active: boolean, origin: Position, maxim: Position }> = observer((props) => {
+const LassoTool: React.FC<{ view: ViewModel, active: boolean, origin: Position, maxim: Position }> = observer((props) => {
     const { view, active, origin, maxim } = props;
     const x = Math.min(origin.x, maxim.x);
     const y = Math.min(origin.y, maxim.y);
     const w = Math.abs(maxim.x - origin.x);
     const h = Math.abs(maxim.y - origin.y);
 
-    const style: React.CSSProperties = { strokeDasharray: view.zoom !== 0 ? 2 / view.zoom : 0, stroke: 'grey', strokeWidth: active && view.zoom !== 0 ? 1 / view.zoom : 0, fill: 'none' };
+    const style: React.CSSProperties = { strokeDasharray: view.zoomFactor !== 0 ? 2 / view.zoomFactor : 0, stroke: 'grey', strokeWidth: active && view.zoomFactor !== 0 ? 1 / view.zoomFactor : 0, fill: 'none' };
 
     return <rect x={x} y={y} width={w} height={h} style={style} />
 })
@@ -255,4 +247,4 @@ const calculateOffset: (element: HTMLElement | null, offset: string) => number =
     }
   }
 
-export default Canvas;
+export default Diagram;

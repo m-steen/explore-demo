@@ -1,9 +1,9 @@
 import React from 'react';
 import { withKnobs, text, select } from "@storybook/addon-knobs";
 import { action } from '@storybook/addon-actions';
-import { CommandButton, Command, ICommandButton } from '../components/CommandButton';
+import { CommandButton, Command, ICommandButton } from '../wmf/components/CommandButton';
 import "bootstrap/dist/css/bootstrap.min.css";
-import { TitleBar } from '../components/TitleBar';
+import { TitleBar } from '../wmf/components/TitleBar';
 
 export default {
   title: 'TitleBar',

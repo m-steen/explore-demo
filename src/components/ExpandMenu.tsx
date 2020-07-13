@@ -5,7 +5,7 @@ import Application from '../model/application';
 import Select, { ValueType, ActionMeta } from 'react-select';
 
 export interface IExpandForm extends FormProps {
-  appState: Application;
+  editor: Application;
   onSubmit?: React.FormEventHandler<any>;
 }
 
@@ -16,24 +16,24 @@ export class ExpandForm extends React.Component<IExpandForm> {
     console.log(options)
     console.log(meta)
     if (options instanceof Array) {
-      this.props.appState.filter.relations = options.map((option) => option.value);
+      this.props.editor.filter.relations = options.map((option) => option.value);
     }
   }
 
   handleTypeFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
     if (options instanceof Array) {
-      this.props.appState.filter.types = options.map((option) => option.value);
+      this.props.editor.filter.types = options.map((option) => option.value);
     }
   }
 
   toggleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const filter = this.props.appState.filter;
+    const filter = this.props.editor.filter;
     const name = e.target.name;
-    this.props.appState.filter = { ...filter, [name]: e.target.checked };
+    this.props.editor.filter = { ...filter, [name]: e.target.checked };
   }
 
   render() {
-    const { filter, relationTypes, objectTypes, view } = this.props.appState;
+    const { filter, relationTypes, objectTypes } = this.props.editor;
     const relationFilterOptions = relationTypes.map((relType) => ({ value: relType, label: relType.replace('Relation', '') }));
     const activeRelationFilter = filter.relations.map((relType) => ({ value: relType, label: relType.replace('Relation', '') }));
     const typeFilterOptions =
@@ -42,7 +42,7 @@ export class ExpandForm extends React.Component<IExpandForm> {
         .map((type) => ({ value: type, label: type }));
     const activeTypeFilter = filter.types.map((type) => ({ value: type, label: type }));
     console.log(filter.outgoing, filter.incoming)
-    if (view.selection.length > 0) {
+    if (this.props.editor.selection.length > 0) {
       return (
         <Form onSubmit={this.props.onSubmit}>
           <Form.Group controlId="relationTypeFilter">
