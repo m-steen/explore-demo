@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import DataGrid, { Column, SelectColumn, SortDirection, HeaderRendererProps, Filters, FilterRendererProps, FormatterProps } from 'react-data-grid';
 import 'react-data-grid/dist/react-data-grid.css';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DraggableHeaderRenderer } from './DraggableHeaderRenderer';
 import { NumericFilter } from './filters/NumericFilter';
 import './filters/HeaderFilters.css';
@@ -351,6 +353,7 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
         <button type="button" onClick={toggleFilters}>Toggle Filters</button>{' '}
         <button type="button" onClick={clearFilters}>Clear Filters</button>
       </div>
+      <DndProvider backend={HTML5Backend}>
         <DataGrid
           height={600}
           columns={draggableColumns}
@@ -369,7 +372,7 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
           emptyRowsRenderer={EmptyRowsRenderer}
           summaryRows={summaryRows}
         />
-        {/* {elements.map((row: IObject) => <p key={row.id}>{row.name + ', ' + row.type}</p>)} */}
+      </DndProvider>
     </div>
   );
 
