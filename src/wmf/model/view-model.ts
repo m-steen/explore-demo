@@ -11,8 +11,8 @@ export class ViewModel extends MModel {
   @computed get nodes(): ViewNode[] { return this.objects as ViewNode[]; }
   @computed get edges(): ViewEdge[] { return this.relations as ViewEdge[]; }
 
-  origin = new Position(0, 0);
-  size = new Size(1140, 1140 / 4 * 3);
+  @observable origin = new Position(0, 0);
+  @observable size = new Size(1140, 1140 / 4 * 3);
 
   @observable x = this.origin.x;
   @observable y = this.origin.y;

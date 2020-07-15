@@ -15,8 +15,9 @@ export interface DiagramProps {
 
 @observer
 class Diagram extends React.Component<DiagramProps> {
-  canvas: HTMLDivElement | null = null; 
-  @observable lassoToolActive = false;
+  canvas: HTMLDivElement | null = null;
+  dragging = false;
+  lassoToolActive = false;
   @observable lassoToolOrigin = { x: 0, y: 0 };
   @observable lassoToolMaxim = { x: 0, y: 0 };
 
@@ -58,9 +59,7 @@ class Diagram extends React.Component<DiagramProps> {
     const style: React.CSSProperties = {};
     return (
       <div style={{ width: '100%' }}>
-        <div id='Canvas' ref={ref => this.canvas = ref} style={style}
-          onClick={this.handleClick}
-        >
+        <div id='Canvas' ref={ref => this.canvas = ref} style={style}>
           <DraggableCore onStart={this.handleDragStart} onDrag={this.handleDrag} onStop={this.handleDragStop} >
             <svg viewBox={viewPort} >
               {view.edges.map((edge) => <DiagramLink key={(edge instanceof EdgeSegment) ? edge.id + edge.target.id : edge.id} edge={edge} />)}
@@ -78,16 +77,6 @@ class Diagram extends React.Component<DiagramProps> {
         {/* <p> x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p> */}
       </div>
     );
-  }
-
-  handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (this.lassoToolActive) {
-      this.lassoToolActive = false;
-    } else {
-      const { view } = this.props;
-      view.getEditor().clearSelection();
-    }
-    e.stopPropagation();
   }
 
   onWheel = (e: WheelEvent) => {
@@ -110,33 +99,33 @@ class Diagram extends React.Component<DiagramProps> {
   }
 
   handleDragStart: DraggableEventHandler = (e, data) => {
-    const { view } = this.props;
-    if (e.shiftKey && view.getEditor().isSelectionEmpty()) {
+    if (e.shiftKey) {
+      this.lassoToolActive = true;
+      const { view } = this.props;
       view.getEditor().clearSelection();
-      const offsetLeft = view.origin.x // calculateOffset(this.canvas, 'offsetLeft');
-      const offsetTop = view.origin.y // calculateOffset(this.canvas, 'offsetTop');
+      const offsetLeft = view.origin.x;
+      const offsetTop = view.origin.y;
       const x = (data.x - offsetLeft) / view.zoomFactor + view.x;
       const y = (data.y - offsetTop) / view.zoomFactor + view.y;
       this.lassoToolOrigin = { x, y };
       this.lassoToolMaxim = { x, y };
-      this.lassoToolActive = true;
-      e.stopPropagation();
     }
+    e.stopPropagation();
   }
 
   handleDrag: DraggableEventHandler = (e, data) => {
-    const { zoomFactor: zoom } = this.props.view;
+    this.dragging = true;
+    const { zoomFactor } = this.props.view;
     if (this.lassoToolActive) {
       transaction(() => {
-        this.lassoToolMaxim.x += data.deltaX / zoom;
-        this.lassoToolMaxim.y += data.deltaY / zoom;
+        this.lassoToolMaxim.x += data.deltaX / zoomFactor;
+        this.lassoToolMaxim.y += data.deltaY / zoomFactor;
       })
     } else {
       const { view } = this.props;
-      view.getEditor().clearSelection();
       transaction(() => {
-        view.x -= data.deltaX / zoom;
-        view.y -= data.deltaY / zoom;
+        view.x -= data.deltaX / zoomFactor;
+        view.y -= data.deltaY / zoomFactor;
       })
     }
     e.stopPropagation();
@@ -144,8 +133,7 @@ class Diagram extends React.Component<DiagramProps> {
 
   handleDragStop: DraggableEventHandler = (e, data) => {
     if (this.lassoToolActive) {
-      console.log('Drag stop')
-      const view = this.props.view;
+      const { view } = this.props;
       const minX = Math.min(this.lassoToolOrigin.x, this.lassoToolMaxim.x);
       const minY = Math.min(this.lassoToolOrigin.y, this.lassoToolMaxim.y);
       const maxX = Math.max(this.lassoToolOrigin.x, this.lassoToolMaxim.x);
@@ -155,7 +143,16 @@ class Diagram extends React.Component<DiagramProps> {
           (minX < Math.min(e.source.x, e.target.x) && Math.max(e.source.x, e.target.x) < maxX) && 
           (minY < Math.min(e.source.y, e.target.y) && Math.max(e.source.y, e.target.y) < maxY)) as ViewEdge[]).map((e) => e.id));
           view.getEditor().setSelection(selection);
+      this.lassoToolActive = false;
       e.stopPropagation();
+    }
+    if (this.dragging) {
+      this.dragging = false;
+      e.stopPropagation();
+    } else {
+      const { view } = this.props;
+      view.getEditor().clearSelection();
+      view.contextMenuActiveFor = null;
     }
   }
 }
