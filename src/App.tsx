@@ -15,6 +15,7 @@ import Diagram from './wmf/components/diagram/Diagram';
 import ObjectTable from './wmf/components/data-grid/ObjectTable';
 import { PropertySheet } from './wmf/components/PropertySheet';
 import { ViewNode } from './wmf/model/view-model';
+import { Login } from './components/Login';
 
 @observer
 class App extends React.Component {
@@ -30,6 +31,8 @@ class App extends React.Component {
     const { title, view } = this.editor;
 
     return (
+      <>
+      <Login editor={this.editor}/>
       <Container fluid>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
           <TitleBar title={title} menuItems={[
@@ -39,7 +42,7 @@ class App extends React.Component {
         </Row>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
           <Col md={4} style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
-            <Tabs defaultActiveKey="profile" id="uncontrolled-tab-example" mountOnEnter unmountOnExit>
+            <Tabs defaultActiveKey="search" id="uncontrolled-task-tabs" mountOnEnter unmountOnExit>
               <Tab eventKey="search" title="Search">
                 <SearchForm appState={this.editor} onSubmit={this.onQuerySubmit} onClear={this.onClear} />
               </Tab>
@@ -68,12 +71,12 @@ class App extends React.Component {
               </Tab>
               <Tab eventKey="table" title="Table">
                 <ObjectTable model={view} editor={this.editor} />
-                {/* <DataTable columns={grid.columns} rows={grid.rows} /> */}
               </Tab>
             </Tabs>
           </Col>
         </Row>
       </Container>
+      </>
     );
   }
 

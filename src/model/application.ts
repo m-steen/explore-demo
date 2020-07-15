@@ -126,17 +126,7 @@ class Application extends Editor {
   constructor(title: string = '') {
     super(new ArangoRepository());
     this.title = title;
-    this.repository.setUrl('http://big.bizzdesign.io:8529');
-    this.repository.login('maarten', 'uAXTUAf8WW4Uk5zjpwfN7SE5h6a')
-    .then((result) => {
-      if (result === 'success') {
-        if (this.repository.selectDatabase('repo')) {
-          console.log('Database selected')
-        } else {
-          console.log('Failed to select database')
-        }
-      }
-    });
+    this.repository.setUrl('https://big.bizzdesign.io:8530');
 
     this.view.nodeColor = (node: ViewNode) => {
       const color = colorScheme.get(node.layer);

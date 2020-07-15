@@ -2,7 +2,7 @@ import { transaction, observable } from 'mobx';
 import { Database, aql } from 'arangojs';
 import { Filter } from '../../model/application';
 import { IObject, IDocument, IRelation } from '../model/model';
-import { Repository } from './repository';
+import { Repository, User } from './repository';
 import { ViewModel, ViewNode } from '../model/view-model';
 
 function removeMetaData(doc: IDocument): IDocument {
@@ -23,6 +23,7 @@ class ArangoRepository implements Repository {
   });
   @observable availableDatabases: string[] = [];
   @observable database: string | undefined;
+  @observable user: User | undefined;
   @observable loggedIn: boolean = false;
   @observable loginFailed: boolean = false;
 
@@ -39,6 +40,7 @@ class ArangoRepository implements Repository {
         this.loggedIn = true;
         this.loginFailed = false;
         this.db.useBasicAuth(username, password);
+        this.user = { username, password };
         return 'success';
       })
       .catch((_err) => {
@@ -60,6 +62,10 @@ class ArangoRepository implements Repository {
           return 'failed';
         }
       })
+  }
+
+  listDatabases(): string[] {
+    return this.availableDatabases;
   }
 
   selectDatabase(dbName: string): boolean {
