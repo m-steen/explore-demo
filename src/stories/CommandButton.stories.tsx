@@ -2,8 +2,6 @@ import React from 'react';
 import { withKnobs, text, select } from "@storybook/addon-knobs";
 import { action } from '@storybook/addon-actions';
 import { CommandButton, Command } from '../wmf/components/CommandButton';
-import "bootstrap/dist/css/bootstrap.min.css";
-import { ButtonProps } from 'react-bootstrap';
 
 export default {
   title: 'CommandButton',

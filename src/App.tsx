@@ -1,10 +1,10 @@
 import React from 'react';
 import { Container, Row, Col, ButtonGroup, Tabs, Tab } from 'react-bootstrap';
 import "bootstrap/dist/css/bootstrap.min.css";
+import './index.css';
 import { observer } from 'mobx-react';
 import { transaction } from 'mobx';
 import { ValueType, ActionMeta } from 'react-select';
-import './App.css';
 import Application from './model/application';
 import { TitleBar } from './wmf/components/TitleBar';
 import { CommandButton, Command } from './wmf/components/CommandButton';
