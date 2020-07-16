@@ -1,7 +1,7 @@
 import React from 'react';
 import { transaction, observable } from 'mobx';
 import { observer } from 'mobx-react';
-import { Position, Size } from '../../graphics/graphics';
+import { Position } from '../../graphics/graphics';
 import { ViewModel, ViewNode, ViewEdge, EdgeSegment } from '../../model/view-model';
 import DiagramNode from './DiagramNode';
 import DiagramLink from './DiagramLink';
@@ -17,16 +17,16 @@ export interface DiagramProps {
 class Diagram extends React.Component<DiagramProps> {
   canvas: HTMLDivElement | null = null;
   dragging = false;
-  lassoToolActive = false;
+  @observable lassoToolActive = false;
   @observable lassoToolOrigin = { x: 0, y: 0 };
   @observable lassoToolMaxim = { x: 0, y: 0 };
 
   componentDidMount() {
     const { view } = this.props;
-    view.origin = new Position(
+    view.setPosition(
       calculateOffset(this.canvas, 'offsetLeft'), 
       calculateOffset(this.canvas, 'offsetTop'));
-    view.size = new Size(
+    view.setSize(
       this.canvas?.offsetWidth ?? view.size.width,
       this.canvas?.offsetHeight ?? view.size.height
     );
@@ -44,10 +44,10 @@ class Diagram extends React.Component<DiagramProps> {
 
   componentDidUpdate() {
     const { view } = this.props;
-    view.origin = new Position(
+    view.setPosition(
       calculateOffset(this.canvas, 'offsetLeft'), 
       calculateOffset(this.canvas, 'offsetTop'));
-    view.size = new Size(
+    view.setSize(
       this.canvas?.offsetWidth ?? view.size.width,
       this.canvas?.offsetHeight ?? view.size.height
     );
@@ -82,11 +82,13 @@ class Diagram extends React.Component<DiagramProps> {
   onWheel = (e: WheelEvent) => {
     e.preventDefault();
     const { view } = this.props;
-    if (e.altKey) {
-      const zoomBy = -e.deltaY / 30;
-      view.zoom(zoomBy);
+    if (e.ctrlKey) {
+      const zoomBy = -e.deltaY / 5;
+      const x = (e.x - view.origin.x) / view.zoomFactor + view.x;
+      const y = (e.y - view.origin.y) / view.zoomFactor + view.y;
+      view.zoomTo(x, y, zoomBy);
     } else {
-      view.pan(0, e.deltaY / 5);
+      view.pan(e.deltaX / 3, e.deltaY / 5);
     }
   }
 

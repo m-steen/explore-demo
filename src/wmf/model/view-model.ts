@@ -73,22 +73,44 @@ export class ViewModel extends MModel {
     })
   }
 
+  @action
+  setPosition(x: number, y: number) {
+    this.origin.x = x;
+    this.origin.y = y;
+  }
+
+  @action
+  setSize(width: number, height: number) {
+    this.size.width = width;
+    this.size.height = height;
+  }
+
   pan = (deltaX: number, deltaY: number) => {
     transaction(() => {
-      this.x += deltaX;
-      this.y += deltaY;
+      this.x -= deltaX / this.zoomFactor;
+      this.y -= deltaY / this.zoomFactor;
     })
   }
 
   zoom = (zoomBy: number) => {
-    transaction(() => {
-      this.x += zoomBy / this.zoomFactor;
-      this.w -= zoomBy / this.zoomFactor * 2;
-      this.y += zoomBy / this.zoomFactor * 4 / 3;
-    })
+    if (zoomBy < 0 || this.w > 100) {
+      transaction(() => {
+        this.w -= zoomBy / this.zoomFactor;
+        this.x += zoomBy / 2 / this.zoomFactor;
+        this.y += zoomBy / 2 / this.zoomFactor;
+      })
+    }
   }
 
-  zoomToFit() {
+  zoomTo = (x: number, y: number, zoomBy: number) => {
+    if (zoomBy < 0 || this.w > 100) {
+      this.w -= zoomBy / this.zoomFactor;
+      this.x += (x - this.x) / this.w * zoomBy / this.zoomFactor;
+      this.y += (y - this.y) / this.h / 4 * 3 * zoomBy / this.zoomFactor;
+    }
+  }
+
+  zoomToFit = () => {
     if (this.maxX - this.minX > 0) {
       transaction(() => {
         this.x = this.minX - 20;
