@@ -20,6 +20,11 @@ function stringifyPropValue(property: IProperty): string {
       return numberFormatter.format(property.value as number);
     case "string":
       return property.value as string;
+    case "rtf": {
+        var rtf = (property.value as string).replace(/\\par[d]?/g, "");
+        rtf = rtf.replace(/\{\*?\\[^{}]+}|[{}]|\\\n?[A-Za-z]+\n?(?:-?\d+)?[ ]?/g, "")
+        return rtf.replace(/\\'[0-9a-zA-Z]{2}/g, "").trim();
+    }
     case "date":
       return dateFormatter.format(property.value as number);
     case "money":
@@ -37,6 +42,7 @@ function stringifyPropValue(property: IProperty): string {
       if (Property.isEnum(property.value)) {
         return property.value.name;
       }
+      console.log('Unknown property type: ' + property.type, property)
       return property.value?.toString() || '';
     }
   }
