@@ -13,8 +13,6 @@ export interface IExpandForm extends FormProps {
 export class ExpandForm extends React.Component<IExpandForm> {
 
   handleRelationFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
-    console.log(options)
-    console.log(meta)
     if (options instanceof Array) {
       this.props.editor.filter.relations = options.map((option) => option.value);
     }
@@ -41,7 +39,6 @@ export class ExpandForm extends React.Component<IExpandForm> {
         .filter((type) => filter.layers.length === 0 || filter.layers.some((layer) => type.includes(layer)))
         .map((type) => ({ value: type, label: type }));
     const activeTypeFilter = filter.types.map((type) => ({ value: type, label: type }));
-    console.log(filter.outgoing, filter.incoming)
     if (this.props.editor.selection.length > 0) {
       return (
         <Form onSubmit={this.props.onSubmit}>

@@ -4,7 +4,6 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import './index.css';
 import { observer } from 'mobx-react';
 import { transaction } from 'mobx';
-import { ValueType, ActionMeta } from 'react-select';
 import Application from './model/application';
 import { TitleBar } from './wmf/components/TitleBar';
 import { CommandButton, Command } from './wmf/components/CommandButton';
@@ -22,11 +21,11 @@ import { SelectForm } from './components/SelectForm';
 class App extends React.Component {
   editor = new Application('Explore demo');
 
-  constructor(props: any) {
-    super(props);
-    // Load the model on startup...
-    this.editor.initTestModel();
-  }
+  // constructor(props: any) {
+  //   super(props);
+  //   // Load the model on startup...
+  //   this.editor.initTestModel();
+  // }
 
   render() {
     const { title, view } = this.editor;
@@ -152,31 +151,33 @@ class App extends React.Component {
     // remember the current selection
     const currentSelection: ViewNode[] = [...view.nodes.filter((node) => node.isSelected)];
     Promise.all(
-      currentSelection.map((node) => {
+      transaction(() =>
+        currentSelection.map((node) => {
           return this.editor.repository.expandRelations(node, filter, view);
         })
+      )
     )
     // then deselect the original selection and layout the result
-    .then(() => currentSelection.forEach((node) => this.editor.toggleSelection(node)))
+    .then(() => transaction(() => currentSelection.forEach((node) => this.editor.toggleSelection(node))))
     .then(() => this.editor.view.layout.apply());
   }
 
-  filter = (eventKey: any, event: any) => {
-    console.log(eventKey)
-    this.editor.view.nodes.forEach((n) => {
-      if (eventKey.includes(n.layer)) {
-        console.log(n);
-      }
-    })
-  }
+  // filter = (eventKey: any, event: any) => {
+  //   console.log(eventKey)
+  //   this.editor.view.nodes.forEach((n) => {
+  //     if (eventKey.includes(n.layer)) {
+  //       console.log(n);
+  //     }
+  //   })
+  // }
 
-  handleFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
-    console.log(options)
-    console.log(meta)
-    if (options instanceof Array) {
-      this.editor.filter.layers = options.map((option) => option.value);
-    }
-  }
+  // handleFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
+  //   console.log(options)
+  //   console.log(meta)
+  //   if (options instanceof Array) {
+  //     this.editor.filter.layers = options.map((option) => option.value);
+  //   }
+  // }
 
   onApplyFilter = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

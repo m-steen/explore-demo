@@ -132,7 +132,6 @@ class ArangoRepository implements Repository {
         .then((array) => {
           transaction(() => {
             array.each((result: { relation: IRelation, target: IObject, documents: IDocument[] }) => {
-              console.log(result)
               const { relation: r, target: t, documents } = result;
               if (!t || !r) { // workaround for incomplete data
                 return;
@@ -140,6 +139,7 @@ class ArangoRepository implements Repository {
               let target = view.nodes.find((x) => t.id === x.id);
               if (target === undefined) {
                 target = view.addNode(t.type, t.name, t.id);
+                target.layer = t.layer;
                 documents.forEach((doc) => Object.keys(doc).forEach((name) => target?.setProperty(name, doc[name])));
                 view.getEditor().selectElement(target);
               }
@@ -172,7 +172,6 @@ class ArangoRepository implements Repository {
         .then((array) => {
           transaction(() => {
             array.each((result: { source: IObject, documents: IDocument[], relation: IRelation }) => {
-              console.log(result)
               const { source: s, relation: r, documents } = result;
               if (!s || !r) { // workaround for incomplete data
                 return;
@@ -180,6 +179,7 @@ class ArangoRepository implements Repository {
               let source = view.nodes.find((x) => s.id === x.id);
               if (source === undefined) {
                 source = view.addNode(s.type, s.name, s.id);
+                source.layer = s.layer;
                 documents.forEach((doc) => Object.keys(doc).forEach((name) => source?.setProperty(name, doc[name])));
                 view.getEditor().selectElement(source);
               }
@@ -237,6 +237,7 @@ class ArangoRepository implements Repository {
                 let target = model.nodes.find((x) => t.id === x.id);
                 if (target === undefined) {
                   target = model.addNode(t.type, t.name, t.id);
+                  target.layer = t.layer;
                   targetDocuments.forEach((doc) => Object.keys(removeMetaData(doc)).forEach((name) => target?.setProperty(name, doc[name])));
                 }
                 let edge = model.edges.find((x) => r.id === x.id);
