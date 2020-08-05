@@ -1020,7 +1020,11 @@ objectDocs = List();
 nestingDocs = List();
 relationDocs = List();
 blockDocs = List();
-toGraph(modelpackage, objectDocs, nestingDocs, relationDocs, blockDocs);
+root = modelpackage;
+if (!selection.empty()) {
+	root = selection[1];
+}
+toGraph(root, objectDocs, nestingDocs, relationDocs, blockDocs);
 
 newObjectDocs = undefined;
 ok = addNewDocuments(objectDocs, "Objects", undefined, newObjectDocs);

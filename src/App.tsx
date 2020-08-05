@@ -16,6 +16,7 @@ import ObjectTable from './wmf/components/data-grid/ObjectTable';
 import { PropertySheet } from './wmf/components/PropertySheet';
 import { ViewNode } from './wmf/model/view-model';
 import { Login } from './components/Login';
+import { SelectForm } from './components/SelectForm';
 
 @observer
 class App extends React.Component {
@@ -45,6 +46,9 @@ class App extends React.Component {
             <Tabs defaultActiveKey="search" id="uncontrolled-task-tabs" mountOnEnter unmountOnExit>
               <Tab eventKey="search" title="Search">
                 <SearchForm appState={this.editor} onSubmit={this.onQuerySubmit} onClear={this.onClear} />
+              </Tab>
+              <Tab eventKey="select" title="Select">
+                <SelectForm editor={this.editor} onSubmit={this.onSelectSubmit} onClear={this.onClearSelection} />
               </Tab>
               <Tab eventKey="expand" title="Expand">
                 <ExpandForm editor={this.editor} onSubmit={this.onExpandSubmit} />
@@ -103,6 +107,39 @@ class App extends React.Component {
       .then(() => view.layout.apply());
     })
   }
+
+  onSelectSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const query = this.editor.query;
+    const filter = this.editor.filter;
+    const view = this.editor.view;
+    transaction(() => {
+      this.editor.clearSelection();
+      view.nodes.forEach((node) => {
+        let match;
+        if (query.length > 0) {
+          const queryMatch = node.name.toLowerCase().includes(query.toLowerCase());
+          match = match ? match && queryMatch : queryMatch;
+        }
+        if (filter.layers.length > 0) {
+          const layerMatch = filter.layers.includes(node.layer);
+          match = match ? match && layerMatch : layerMatch;
+        }
+        if (filter.types.length > 0) {
+          const typeMatch = filter.types.includes(node.type);
+          match = match ? match && typeMatch : typeMatch;
+        }
+        if (match) {
+          this.editor.selectElement(node)
+        }
+      });
+    })
+  }
+
+  onClearSelection: Command = () => new Promise((resolve) => {
+    this.editor.clearSelection();
+    resolve();
+  });
 
   onExpandSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
