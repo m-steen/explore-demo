@@ -8,9 +8,9 @@ import { NumericFilter } from './filters/NumericFilter';
 import './filters/HeaderFilters.css';
 import { observer } from 'mobx-react-lite';
 import { PropertyEditor } from '../PropertyEditor';
-import { MModel, MObject, IObject } from '../../model/model';
+import { MModel, MObject } from '../../model/model';
 import Editor from '../../editor/editor';
-import Property, { PropertyType, IProperty, Enum, ValueType } from '../../model/properties';
+import Property, { PropertyType, IProperty, Enum, ValueType, Money } from '../../model/properties';
 import { DummyNode, EdgeSegment } from '../../model/view-model';
 
 interface ObjectTableProps {
@@ -55,9 +55,10 @@ const compareStrings: (a: ValueType, b: ValueType) => number =
 interface SummaryRow {
   id: string;
   totalCount: number;
+  sum: (key: string) => number;
 }
 
-const PropertyFormatter = (props: FormatterProps<IObject, SummaryRow>) => {
+const PropertyFormatter = (props: FormatterProps<MObject, SummaryRow>) => {
   const prop = props.row.properties ? props.row.properties[props.column.key] : null;
   if (prop) {
     return <PropertyEditor property={prop} readOnly={true} />
@@ -309,7 +310,19 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
   }, [filteredRows, properties, sortColumn, sortDirection]);
 
   const summaryRows = useMemo(() => {
-    const summaryRow: SummaryRow = { id: 'total_0', totalCount: filteredRows.length };
+    const summaryRow: SummaryRow = { id: 'total_0', totalCount: filteredRows.length, 
+      sum: (key: string) => filteredRows.reduce((_sum, obj) => {
+        const prop = obj.getProperty(key);
+        if (prop && prop.type === "number") {
+          _sum += prop.value as number;
+        }
+        if (prop && prop.type === "money") {
+          _sum += (prop.value as Money).amount;
+        }
+        return _sum;
+      },
+      0
+      ) };
     return [summaryRow];
   }, [filteredRows]);
 
@@ -340,6 +353,20 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
       sortable: true,
       formatter: PropertyFormatter,
       filterRenderer: selectFilter(columnProp.type),
+      summaryFormatter: (props) => { 
+        let sum: ValueType;
+        const _sum = props.row.sum(props.column.key);
+        if (columnProp.type === "money") {
+          sum = { currency: 'USD', amount: _sum };
+        } else {
+          sum = _sum;
+        }
+        if (_sum !== 0) {
+          return <PropertyEditor property={{name: 'sum', label: 'sum', type: columnProp.type, value: sum}} readOnly={true} />;
+        } else {
+          return null;
+        }
+      }
     }
     const newColumns = [...columns];
     newColumns.push(newColumn);

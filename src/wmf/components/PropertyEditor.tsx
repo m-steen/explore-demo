@@ -27,21 +27,27 @@ function stringifyPropValue(property: IProperty): string {
     }
     case "date":
       return dateFormatter.format(property.value as number);
-    case "money":
+    case "money": {
       const currencyFormatter = new Intl.NumberFormat(navigator.language, {
         style: 'currency',
         currency: (property.value as Money).currency
       });
       return currencyFormatter.format((property.value as Money).amount);
-    
-    default: {
-      if (Property.isCollectionType(property.type)) {
-        const elementType = property.type[0];
-        return (property.value as ValueType[]).map((val) => stringifyPropValue(new Property('element', 'element', elementType, val))).join(', ');
-      }
+    }
+    case "enum": {
       if (Property.isEnum(property.value)) {
         return property.value.name;
+      } else {
+        return property.value as string;
       }
+    }
+    case "list":
+    case "set": {
+      const elementType = property.type[0];
+      return (property.value as ValueType[]).map((val) => stringifyPropValue(new Property('element', 'element', elementType, val))).join(', ');
+    }
+
+    default: {
       console.log('Unknown property type: ' + property.type, property)
       return property.value?.toString() || '';
     }
