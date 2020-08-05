@@ -12,6 +12,7 @@ import { MModel, MObject } from '../../model/model';
 import Editor from '../../editor/editor';
 import Property, { PropertyType, IProperty, Enum, ValueType, Money } from '../../model/properties';
 import { DummyNode, EdgeSegment } from '../../model/view-model';
+import { DropdownButton, Dropdown, ButtonGroup, Button } from 'react-bootstrap';
 
 interface ObjectTableProps {
   model: MModel,
@@ -134,7 +135,9 @@ const applyPropertyFilters = (row: MObject, filters: Filters) => {
         case "rtf":
           return (prop.value as string).length >= filters[key].length && (prop.value as string).toLowerCase().includes(filters[key].toLowerCase());
         case "enum":
-          return Property.isEnum(prop.value) ? prop.value.name.toLowerCase().includes(filters[key].toLowerCase()) : false;
+          return Property.isEnum(prop.value) ? 
+            prop.value.name.toLowerCase().includes(filters[key].toLowerCase()) : 
+            (prop.value as string).length >= filters[key].length && (prop.value as string).toLowerCase().includes(filters[key].toLowerCase());
         case "number":
         case "money":
           return filters[key].filterValues(row, filters[key], key);
@@ -203,7 +206,14 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
 
   const properties = useMemo(() =>
     elements.reduce(
-      (properties: IProperty[], obj: MObject) => properties.concat(obj.getProperties()),
+      (properties: IProperty[], obj: MObject) => {
+        obj.getProperties().forEach((prop) => {
+          if (!properties.some((p) => prop.name === p.name)) {
+            properties.push(prop);
+          }
+        })
+        return properties;
+      },
       []
     ), [elements]);
   const availableProperties = useMemo(() =>
@@ -346,10 +356,7 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
     });
   }
 
-  function handleAddColumn() {
-    if (availableProperties.length < 1) return;
-
-    const columnProp = availableProperties[0];
+  function addColumn(columnProp: IProperty) {
 
     const newColumn: Column<MObject, SummaryRow> = {
       key: columnProp.name,
@@ -381,9 +388,15 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
   return (
     <div>
       <div style={{ marginBottom: 10, textAlign: 'right' }}>
-        <button type="button" onClick={handleAddColumn}>Add Column</button>{' '}
-        <button type="button" onClick={toggleFilters}>Toggle Filters</button>{' '}
-        <button type="button" onClick={clearFilters}>Clear Filters</button>
+        <ButtonGroup>
+        <DropdownButton id="add-column" title={'Add Column'} size='sm'>
+          {availableProperties.map((prop) => (
+            <Dropdown.Item key={prop.name} onSelect={() => addColumn(prop)}>{prop.label}</Dropdown.Item>
+          ))}
+        </DropdownButton>
+        <Button type="button" size='sm' onClick={toggleFilters}>Toggle Filters</Button>{' '}
+        <Button type="button" size='sm' onClick={clearFilters}>Clear Filters</Button>
+        </ButtonGroup>
       </div>
       <DndProvider backend={HTML5Backend}>
         <DataGrid
