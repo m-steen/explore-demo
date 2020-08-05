@@ -101,6 +101,8 @@ function selectFilter(propType: PropertyType) {
     case "date":
       return NumericFilter;
     case "string":
+    case "rtf":
+    case "enum":
       return StringFilter;
 
     default:
@@ -129,7 +131,10 @@ const applyPropertyFilters = (row: MObject, filters: Filters) => {
             || (filters[key] === 'true' ? (prop.value as boolean) : !(prop.value as boolean))
           );
         case "string":
+        case "rtf":
           return (prop.value as string).length >= filters[key].length && (prop.value as string).toLowerCase().includes(filters[key].toLowerCase());
+        case "enum":
+          return Property.isEnum(prop.value) ? prop.value.name.toLowerCase().includes(filters[key].toLowerCase()) : false;
         case "number":
         case "money":
           return filters[key].filterValues(row, filters[key], key);

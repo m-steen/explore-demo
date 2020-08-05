@@ -1,4 +1,4 @@
-export type PropertyType = 'boolean' | 'number' | 'string' | 'date' | 'money' | PropertyType[] | { [field: string]: PropertyType };
+export type PropertyType = 'boolean' | 'number' | 'string' | 'enum' | 'date' | 'money' | PropertyType[] | { [field: string]: PropertyType };
 
 export type Money = { currency: string, amount: number };
 export type List = ValueType[];
