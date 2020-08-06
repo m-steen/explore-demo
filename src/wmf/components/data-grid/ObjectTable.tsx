@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import DataGrid, { Column, SelectColumn, SortDirection, HeaderRendererProps, Filters, FilterRendererProps, FormatterProps } from 'react-data-grid';
+import DataGrid, { Column, SelectColumn, SortDirection, HeaderRendererProps, Filters, FilterRendererProps, FormatterProps, RowRendererProps, Row } from 'react-data-grid';
 import 'react-data-grid/dist/react-data-grid.css';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -13,10 +13,15 @@ import Editor from '../../editor/editor';
 import Property, { PropertyType, IProperty, Enum, ValueType, Money } from '../../model/properties';
 import { DummyNode, EdgeSegment } from '../../model/view-model';
 import { DropdownButton, Dropdown, ButtonGroup, Button } from 'react-bootstrap';
+import { createPortal } from 'react-dom';
+import { ContextMenu, MenuItem, ContextMenuTrigger } from 'react-contextmenu';
+import './react-contextmenu.css';
+
 
 interface ObjectTableProps {
   model: MModel,
   editor: Editor,
+  onExploreObject?: (e: React.MouseEvent<HTMLDivElement>, object: MObject) => void
 }
 
 const compareBooleans: (a: ValueType, b: ValueType) => number = 
@@ -186,6 +191,14 @@ function createColumns(objects: MObject[]): Column<MObject, SummaryRow>[] {
 
 function EmptyRowsRenderer() {
   return <div style={{ textAlign: 'center' }}>Nothing to show ...</div>;
+}
+
+function RowRenderer(props: RowRendererProps<MObject, SummaryRow>) {
+  return (
+    <ContextMenuTrigger id="grid-context-menu" collect={() => ({ object: props.row })}>
+      <Row {...props} />
+    </ContextMenuTrigger>
+  );
 }
 
 
@@ -385,6 +398,13 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
     setColumns(newColumns);
   }
 
+  function onExplore(e: React.MouseEvent<HTMLDivElement>, data: { object: MObject }) {
+    console.log('Explore', data.object)
+    if (props.onExploreObject) {
+      props.onExploreObject(e, data.object);
+    }
+  }
+
   return (
     <div>
       <div style={{ marginBottom: 10, textAlign: 'right' }}>
@@ -415,9 +435,16 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
           sortDirection={sortDirection}
           onSort={handleSort}
           emptyRowsRenderer={EmptyRowsRenderer}
+          rowRenderer={RowRenderer}
           summaryRows={summaryRows}
         />
       </DndProvider>
+      {createPortal(
+        <ContextMenu id="grid-context-menu">
+          <MenuItem onClick={onExplore}>Explore this object</MenuItem>
+        </ContextMenu>,
+        document.body
+      )}
     </div>
   );
 

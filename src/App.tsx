@@ -16,6 +16,7 @@ import { PropertySheet } from './wmf/components/PropertySheet';
 import { ViewNode } from './wmf/model/view-model';
 import { Login } from './components/Login';
 import { SelectForm } from './components/SelectForm';
+import { MObject } from './wmf/model/model';
 
 @observer
 class App extends React.Component {
@@ -73,7 +74,7 @@ class App extends React.Component {
                 <Diagram view={view} />
               </Tab>
               <Tab eventKey="table" title="Table">
-                <ObjectTable model={view} editor={this.editor} />
+                <ObjectTable model={view} editor={this.editor} onExploreObject={this.onExploreObject} />
               </Tab>
             </Tabs>
           </Col>
@@ -162,23 +163,6 @@ class App extends React.Component {
     .then(() => this.editor.view.layout.apply());
   }
 
-  // filter = (eventKey: any, event: any) => {
-  //   console.log(eventKey)
-  //   this.editor.view.nodes.forEach((n) => {
-  //     if (eventKey.includes(n.layer)) {
-  //       console.log(n);
-  //     }
-  //   })
-  // }
-
-  // handleFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
-  //   console.log(options)
-  //   console.log(meta)
-  //   if (options instanceof Array) {
-  //     this.editor.filter.layers = options.map((option) => option.value);
-  //   }
-  // }
-
   onApplyFilter = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const view = this.editor.view;
@@ -193,6 +177,16 @@ class App extends React.Component {
         .filter((n) => !filter.types.includes(n.type))
         .forEach((n) => n.delete());
     }
+  }
+
+  onExploreObject = (e: React.MouseEvent<HTMLDivElement>, object: MObject) => {
+    this.editor.clearSelection();
+    const view = this.editor.view;
+    view.relations = [];
+    view.objects = [object];
+    this.editor.filter = { layers: [], types: [], relations: [], outgoing: true, incoming: true };
+    this.editor.repository.expandRelations(object as ViewNode, this.editor.filter, this.editor.view)
+      .then(() => view.layout.apply());
   }
 
 }

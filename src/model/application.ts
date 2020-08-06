@@ -136,32 +136,17 @@ class Application extends Editor {
 
     this.view.nodeMenu = () => {
       const menu = new Menu<ViewNode>();
-      const expandOutgoingAction: Command = (node: ViewNode) => {
+
+      const exploreAction: Command = (node: ViewNode) => {
         this.clearSelection();
-        return this.repository.getRelationsFrom(node, this.filter, this.view).then(() => this.view.layout.apply());
-      }
-      const expandOutgoing = new MenuOption('Expand outgoing relations', expandOutgoingAction);
-      menu.options.push(expandOutgoing);
-      const expandIncomingAction: Command = (node: ViewNode) => {
-        this.clearSelection();
-        return this.repository.getRelationsTo(node, this.filter, this.view).then(() => this.view.layout.apply());
-      }
-      const expandIncoming = new MenuOption('Expand incoming relations', expandIncomingAction);
-      menu.options.push(expandIncoming);
-      const expandAllAction: Command = (node: ViewNode) => {
-        this.clearSelection();
-        return this.repository.getRelationsFrom(node, this.filter, this.view)
-          .then(() => this.repository.getRelationsTo(node, this.filter, this.view))
+        this.view.relations = [];
+        this.view.objects = [node];
+        this.filter = { layers: [], types: [], relations: [], outgoing: true, incoming: true };
+        return this.repository.expandRelations(node, this.filter, this.view)
           .then(() => this.view.layout.apply());
-      }
-      const expandAll = new MenuOption('Expand all relations', expandAllAction);
-      menu.options.push(expandAll);
-      const removeAction: Command = (node: ViewNode) => new Promise<void>((resolve) => {
-        node.delete();
-        resolve();
-      });
-      const removeNode = new MenuOption('Remove', removeAction);
-      menu.options.push(removeNode);
+      };
+      const exploreObject = new MenuOption('Explore', exploreAction);
+      menu.options.push(exploreObject);
       return menu;
     }
   }

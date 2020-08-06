@@ -12413,6 +12413,14 @@ react-color@^2.17.0:
     reactcss "^1.2.0"
     tinycolor2 "^1.4.1"
 
+react-contextmenu@^2.14.0:
+  version "2.14.0"
+  resolved "https://registry.yarnpkg.com/react-contextmenu/-/react-contextmenu-2.14.0.tgz#d8966f30614b9b780b928be4c8d92bd740d55cdd"
+  integrity sha512-ktqMOuad6sCFNJs/ltEwppN8F0YeXmqoZfwycgtZR/MxOXMYx1xgYC44SzWH259HdGyshk1/7sXGuIRwj9hzbw==
+  dependencies:
+    classnames "^2.2.5"
+    object-assign "^4.1.0"
+
 react-data-grid@^7.0.0-canary.16:
   version "7.0.0-canary.16"
   resolved "https://registry.yarnpkg.com/react-data-grid/-/react-data-grid-7.0.0-canary.16.tgz#bc7e76c8d0dea41c1e019089a376d5f5dca0be83"
