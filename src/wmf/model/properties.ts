@@ -1,4 +1,6 @@
-export type PropertyType = 'boolean' | 'number' | 'string' | 'enum' | 'date' | 'money' | PropertyType[] | { [field: string]: PropertyType };
+import { serializable, custom } from 'serializr';
+
+export type PropertyType = 'boolean' | 'number' | 'string' | 'rtf' | 'enum' | 'date' | 'money' | PropertyType[] | { [field: string]: PropertyType };
 
 export type Money = { currency: string, amount: number };
 export type List = ValueType[];
@@ -14,9 +16,84 @@ export interface IProperty {
   value: ValueType;
 }
 
+function serializePropertyType(value: PropertyType): any {
+  switch (value) {
+    case 'boolean':
+    case 'number':
+    case 'string':
+    case 'rtf':
+    case 'enum':
+    case 'date':
+    case 'money':
+    case 'link':
+      return value;
+
+    default:
+      if (value instanceof Array) {
+        return [ serializePropertyType(value[0]) ];
+      }
+      if (value instanceof Object) {
+        const entries = Object.entries(value).map(([key, val]) => ([key, serializePropertyType(val)]));
+        const structure: any = {};
+        entries.forEach(([key, val]) => {
+          structure[key] = val;
+        });
+        return structure;
+      }
+  }
+}
+
+function deserializePropertyType(json: any): PropertyType {
+  return 'boolean';
+}
+
+function serializeValue(value: ValueType): any {
+  switch (typeof (value)) {
+    case 'undefined':
+    case 'boolean':
+    case 'number':
+    case 'string':
+      return value;
+
+    default:
+      if (Property.isMoney(value) || Property.isEnum(value)) {
+        return value;
+      } else if (Property.isCollection(value)) {
+        return value.map((element) => serializeValue(element));
+      } else if (Property.isStructure(value)) {
+        const entries = Object.entries(value).map(([key, val]) => ([key, serializeValue(val)]));
+        const structure: any = {};
+        entries.forEach(([key, val]) => {
+          structure[key] = val;
+        });
+        return structure;
+      }
+      console.log('Cannot serialize: ', value)
+      return {};
+  }
+}
+
+function deserializeValue(json: any): ValueType {
+  return undefined;
+}
+
 class Property implements IProperty {
 
-  constructor(public name: string, public label: string, public type: PropertyType, public value: ValueType) { }
+  @serializable
+  name: string;
+  @serializable
+  label: string;
+  @serializable(custom(serializePropertyType, deserializePropertyType))
+  type: PropertyType;
+  @serializable(custom(serializeValue, deserializeValue))
+  value: ValueType;
+
+  constructor(name: string, label: string, type: PropertyType, value: ValueType) {
+    this.name = name;
+    this.label = label;
+    this.type = type;
+    this.value = value;
+  }
 
   static isProperty(prop: Object): prop is IProperty {
     if ((prop as IProperty).type && (prop as IProperty).value) {

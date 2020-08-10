@@ -2,6 +2,7 @@ import { observable, action, transaction } from 'mobx';
 import Property, { IProperty, ValueType, Money, List, Enum, Structure } from './properties';
 import uuid from 'uuid';
 import Editor from '../editor/editor';
+import { serializable, list, object, identifier, map } from 'serializr';
 
 export interface IObject {
   id: string;
@@ -20,44 +21,17 @@ export interface IDocument {
   [key: string]: IProperty
 }
 
-export class MModel {
-
-  @observable.shallow objects: MObject[] = [];
-  @observable.shallow relations: MRelation[] = [];
-
-  constructor(protected editor: Editor) {}
-
-  @action
-  addObject(type: string, name?: string, id?: string): MObject {
-    const object = new MObject(type, name, id);
-    this.objects.push(object);
-    return object;
-  }
-
-  @action
-  addRelation(type: string, source: MObject, target: MObject, name?: string, id?: string): MRelation {
-    const relation = new MRelation(type, source, target, name, id);
-    this.relations.push(relation);
-    return relation;
-  }
-
-  @action
-  clear() {
-    transaction(() => {
-      this.editor.clearSelection();
-      this.relations = [];
-      this.objects = [];
-    })
-  }
-
-}
-
 export class MObject implements IObject {
+  @serializable(identifier())
   id: string;
-  name: string;
-  @observable properties: { [name: string]: IProperty } = {};
-  type: string;
-  layer: string = '';
+  @serializable
+  @observable name: string;
+  @serializable(map(object(Property)))
+  @observable properties: { [name: string]: Property } = {};
+  @serializable
+  @observable type: string;
+  @serializable
+  @observable layer: string = '';
   // @computed get name(): string { return Object.keys(this.properties).includes('nm') ? (this.properties['nm'].value as string) : this.id; };
 
   constructor(type: string, name?: string, id?: string) {
@@ -96,14 +70,14 @@ export class MObject implements IObject {
 
   @action
   setProperty(name: string, property: IProperty) {
-    this.properties[name] = property;
+    this.properties[name] = new Property(property.name, property.label, property.type, property.value);
     return this;
   }
 
   @action
   addProperties(properties: IProperty[]) {
     properties.forEach((prop) => {
-      this.properties[prop.name] = prop;
+      this.setProperty(prop.name, prop);
     });
     return this;
   }
@@ -161,6 +135,40 @@ export class MRelation extends MObject {
     super(type, name, id);
     this.source = source;
     this.target = target;
+  }
+
+}
+
+export class MModel {
+
+  @serializable(list(object(MObject)))
+  @observable.shallow objects: MObject[] = [];
+  @serializable(list(object(MRelation)))
+  @observable.shallow relations: MRelation[] = [];
+
+  constructor(protected editor: Editor) {}
+
+  @action
+  addObject(type: string, name?: string, id?: string): MObject {
+    const object = new MObject(type, name, id);
+    this.objects.push(object);
+    return object;
+  }
+
+  @action
+  addRelation(type: string, source: MObject, target: MObject, name?: string, id?: string): MRelation {
+    const relation = new MRelation(type, source, target, name, id);
+    this.relations.push(relation);
+    return relation;
+  }
+
+  @action
+  clear() {
+    transaction(() => {
+      this.editor.clearSelection();
+      this.relations = [];
+      this.objects = [];
+    })
   }
 
 }

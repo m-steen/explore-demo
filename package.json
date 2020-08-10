@@ -21,6 +21,7 @@
     "react-draggable": "^4.2.0",
     "react-scripts": "3.3.0",
     "react-select": "^3.0.8",
+    "serializr": "^2.0.3",
     "typescript": "~3.7.2",
     "uuid": "^3.3.3"
   },

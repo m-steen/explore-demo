@@ -4,6 +4,7 @@ import { ViewModel } from '../model/view-model';
 import { Repository } from '../repository/repository';
 import Ticker from './ticker';
 import { Filter } from '../../model/application';
+import { History } from '../model/history';
 
 class EditorState {
   @observable isLoading: boolean = false;
@@ -13,12 +14,16 @@ class EditorState {
 
 class Editor {
 
-  view = new ViewModel(this);
+  @observable.shallow view = new ViewModel(this);
   state = new EditorState();
   @observable selection: string[] = []; // simply a list of object id's
   ticker = new Ticker();
+  history = new History(this);
+  
 
-  constructor(public repository: Repository) {}
+  constructor(public repository: Repository) {
+    this.history.startLogging();
+  }
 
   isSelectionEmpty = () => this.selection.length === 0;
 

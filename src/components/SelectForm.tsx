@@ -20,8 +20,6 @@ export class SelectForm extends React.Component<ISelectForm> {
   }
 
   handleLayerFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
-    console.log(options)
-    console.log(meta)
     if (options instanceof Array) {
       this.props.editor.filter.layers = options.map((option) => option.value);
     }
@@ -92,7 +90,7 @@ export class SelectForm extends React.Component<ISelectForm> {
               onChange={this.handleTypeFilterChange}
               value={activeTypeFilter}
               isMulti
-              closeMenuOnSelect={false} />
+              closeMenuOnSelect={true} />
           </Form.Group>
           <CommandButton label={'Clear Selection'} command={this.props.onClear} />
           <Button variant="primary" type="submit">Select</Button>

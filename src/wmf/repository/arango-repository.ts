@@ -6,7 +6,7 @@ import { Repository, User } from './repository';
 import { ViewModel, ViewNode } from '../model/view-model';
 
 function removeMetaData(doc: IDocument): IDocument {
-  const metaDataProps = ['_key', '_id', '_rev', '_from', '_to'];
+  const metaDataProps = ['_key', '_id', '_rev', '_from', '_to', 'name', 'type', 'label'];
   metaDataProps.forEach((prop) => {
     if (doc[prop]) {
       delete doc[prop];
@@ -194,14 +194,16 @@ class ArangoRepository implements Repository {
 
   expandRelations: (node: ViewNode, filter: Filter, view: ViewModel) => Promise<void> =
     (node, filter, view) => {
-      let promise: Promise<void> = Promise.resolve();
-      if (filter.outgoing) {
-        promise = this.getRelationsFrom(node, filter, view);
-      }
-      if (filter.incoming) {
-        promise = promise.then(() => this.getRelationsTo(node, filter, view));
-      }
-      return promise;
+      return transaction(() => {
+        let promise: Promise<void> = Promise.resolve();
+        if (filter.outgoing) {
+          promise = this.getRelationsFrom(node, filter, view);
+        }
+        if (filter.incoming) {
+          promise = promise.then(() => this.getRelationsTo(node, filter, view));
+        }
+        return promise;
+      })
     }
 
   loadModel: (model: ViewModel) => Promise<void> =

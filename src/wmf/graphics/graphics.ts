@@ -1,9 +1,27 @@
+import { serializable } from 'serializr';
+
 export class Position {
 
-  constructor(public x: number, public y: number) {}
+  @serializable
+  x: number;
+  @serializable
+  y: number;
+
+  constructor(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
 }
 
 export class Size {
 
-  constructor(public width: number, public height: number) {}
+  @serializable
+  width: number;
+  @serializable
+  height: number;
+
+  constructor(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+  }
 }

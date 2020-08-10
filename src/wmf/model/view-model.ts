@@ -5,17 +5,118 @@ import { Position, Size } from '../graphics/graphics';
 import Editor from '../editor/editor';
 import { ForceLayout } from '../graphics/layout/force-layout';
 import { Menu } from '../editor/menu';
+import { serializable, list, reference, object, serialize } from "serializr";
+import Property, { IProperty } from './properties';
+
+export class ViewNode extends MObject {
+
+  @serializable
+  @observable x: number = Math.random() * 800;
+  @serializable
+  @observable y: number = Math.random() * 600;
+  @serializable
+  @observable width: number = 40;
+  @serializable
+  @observable height: number = 30;
+  @serializable
+  @observable shape: string = '';
+
+  @computed get label(): string { return this.name; };
+
+  @computed get isPrimarySelection() {
+    const selection = this.getView().getEditor().selection;
+    return selection.length > 0 && selection[0] === this.id;
+  }
+
+  @computed get isSelected() {
+    return this.getView().getEditor().selection.includes(this.id);
+  }
+
+  constructor(public parent: ViewModel, type: string, name?: string, id?: string) {
+    super(type, name, id);
+    this.shape = this.type;
+  }
+
+  delete = () => {
+    if (this.parent.nodes.includes(this)) {
+      this.parent.edges.filter((edge) => edge.source === this || edge.target === this)
+        .forEach((edge) => edge.delete());
+      if (this.isSelected) {
+        this.parent.getEditor().toggleSelection(this);
+      }
+      this.parent.nodes.splice(this.parent.nodes.indexOf(this), 1);
+    }
+  }
+
+  getView(): ViewModel {
+    return this.parent;
+  }
+
+  @action
+  setPosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  @action
+  setSize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+  }
+
+}
+
+export class ViewEdge extends ViewNode {
+
+  @serializable(reference(ViewNode))
+  source: ViewNode;
+  @serializable(reference(ViewNode))
+  target: ViewNode;
+
+  @computed get label(): string { return this.name; };
+
+  @computed get isPrimarySelection() {
+    const selection = this.getView().getEditor().selection;
+    return selection.length > 0 && selection[0] === this.id;
+  }
+
+  @computed get isSelected() {
+    return this.getView().getEditor().selection.includes(this.id);
+  }
+
+  constructor(parent: ViewModel, type: string, source: ViewNode, target: ViewNode, name?: string, id?: string) {
+    super(parent, type, name, id);
+    this.source = source;
+    this.target = target;
+  }
+
+  delete = () => {
+    if (this.parent.edges.includes(this)) {
+      if (this.isSelected) {
+        this.parent.getEditor().toggleSelection(this);
+      }
+      this.parent.edges.splice(this.parent.edges.indexOf(this), 1);
+    }
+  }
+}
 
 export class ViewModel extends MModel {
 
+  @serializable(list(object(ViewNode)))
   @computed get nodes(): ViewNode[] { return this.objects as ViewNode[]; }
+  @serializable(list(object(ViewEdge)))
   @computed get edges(): ViewEdge[] { return this.relations as ViewEdge[]; }
 
+  @serializable(object(Position))
   @observable origin = new Position(0, 0);
+  @serializable(object(Size))
   @observable size = new Size(1140, 1140 / 4 * 3);
 
+  @serializable
   @observable x = this.origin.x;
+  @serializable
   @observable y = this.origin.y;
+  @serializable
   @observable w = this.size.width;
   @computed get h() { return this.w / 4 * 3; }
 
@@ -124,90 +225,37 @@ export class ViewModel extends MModel {
 
   nodeMenu: () => Menu<ViewNode> = () => new Menu();
 
-}
-
-export class ViewNode extends MObject {
-
-  @observable x: number = Math.random() * 800;
-  @observable y: number = Math.random() * 600;
-  width: number = 40;
-  height: number = 30;
-  shape: string = '';
-
-  @computed get label(): string { return this.name; };
-
-  @computed get isPrimarySelection() {
-    const selection = this.getView().getEditor().selection;
-    return selection.length > 0 && selection[0] === this.id;
+  serialize = () => {
+    return serialize(ViewModel, this);
   }
 
-  @computed get isSelected() {
-    return this.getView().getEditor().selection.includes(this.id);
-  }
-
-  constructor(public parent: ViewModel, type: string, name?: string, id?: string) {
-    super(type, name, id);
-    this.shape = this.type;
-  }
-
-  delete = () => {
-    if (this.parent.nodes.includes(this)) {
-      this.parent.edges.filter((edge) => edge.source === this || edge.target === this)
-        .forEach((edge) => edge.delete());
-      if (this.isSelected) {
-        this.parent.getEditor().toggleSelection(this);
+  deserialize = (json: any) => {
+    const newView = new ViewModel(this.editor);
+    const nodes = json.nodes;
+    nodes.forEach((node: any) => {
+      const newNode = newView.addNode(node.type, node.name, node.id);
+      [ newNode.x, newNode.y, newNode.width, newNode.height, newNode.layer, newNode.shape ] = [ node.x, node.y, node.width, node.height, node.layer, node.shape ];
+      if (node.properties) {
+        const properties: IProperty[] = Object.values(node.properties).filter((prop: any) => Property.isProperty(prop)).map((prop) => prop as IProperty);
+        newNode.addProperties(properties);
       }
-      this.parent.nodes.splice(this.parent.nodes.indexOf(this), 1);
-    }
-  }
-
-  getView(): ViewModel {
-    return this.parent;
-  }
-
-  @action
-  setPosition(x: number, y: number) {
-    this.x = x;
-    this.y = y;
-  }
-
-  @action
-  setSize(width: number, height: number) {
-    this.width = width;
-    this.height = height;
-  }
-
-}
-
-export class ViewEdge extends ViewNode {
-
-  source: ViewNode;
-  target: ViewNode;
-
-  @computed get label(): string { return this.name; };
-
-  @computed get isPrimarySelection() {
-    const selection = this.getView().getEditor().selection;
-    return selection.length > 0 && selection[0] === this.id;
-  }
-
-  @computed get isSelected() {
-    return this.getView().getEditor().selection.includes(this.id);
-  }
-
-  constructor(parent: ViewModel, type: string, source: ViewNode, target: ViewNode, name?: string, id?: string) {
-    super(parent, type, name, id);
-    this.source = source;
-    this.target = target;
-  }
-
-  delete = () => {
-    if (this.parent.edges.includes(this)) {
-      if (this.isSelected) {
-        this.parent.getEditor().toggleSelection(this);
+    });
+    const edges = json.edges;
+    edges.forEach((edge: any) => {
+      const source = newView.nodes.find((n) => edge.source === n.id);
+      const target = newView.nodes.find((n) => edge.target === n.id);
+      if (source && target) {
+        newView.addEdge(edge.type, source, target, edge.name, edge.id);
+      } else {
+        console.log('Source or target not found for: ', edge, source, target)
       }
-      this.parent.edges.splice(this.parent.edges.indexOf(this), 1);
-    }
+    });
+    newView.origin = new Position(json.origin.x, json.origin.y);
+    newView.size = new Size(json.size.width, json.size.height);
+    [ newView.x, newView.y, newView.w ] = [ json.x, json.y, json.w ];
+    newView.nodeColor = this.nodeColor;
+    newView.nodeMenu = this.nodeMenu;
+    this.editor.view = newView;
   }
 }
 

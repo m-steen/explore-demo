@@ -62,7 +62,7 @@ export class ExpandForm extends React.Component<IExpandForm> {
               onChange={this.handleTypeFilterChange}
               value={activeTypeFilter}
               isMulti
-              closeMenuOnSelect={false} />
+              closeMenuOnSelect={true} />
           </Form.Group>
           <Button variant="primary" type="submit">Expand</Button>
         </Form>

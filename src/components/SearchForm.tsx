@@ -19,8 +19,6 @@ export class SearchForm extends React.Component<ISearchForm> {
   }
 
   handleLayerFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
-    console.log(options)
-    console.log(meta)
     if (options instanceof Array) {
       this.props.appState.filter.layers = options.map((option) => option.value);
     }
@@ -68,7 +66,7 @@ export class SearchForm extends React.Component<ISearchForm> {
             onChange={this.handleTypeFilterChange}
             value={activeTypeFilter}
             isMulti
-            closeMenuOnSelect={false} />
+            closeMenuOnSelect={true} />
         </Form.Group>
         <CommandButton label={'Clear'} command={this.props.onClear} />
         <Button variant="primary" type="submit">Add</Button>

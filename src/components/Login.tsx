@@ -76,7 +76,6 @@ export const Login: React.FC<{ editor: Editor }> = observer((props) => {
     const currentSelection = currentDatabase ? { value: currentDatabase, label: currentDatabase } : undefined;
 
     const handleDatabaseSelection = (selection: ValueType<{ value: string, label: string}>) => {
-      console.log('handleDatabaseSelection', selection)
       if (selection) {
         const selected = (selection as {value: string, label: string}).value;
         repository.selectDatabase(selected);

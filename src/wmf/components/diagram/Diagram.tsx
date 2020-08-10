@@ -6,7 +6,7 @@ import { ViewModel, ViewNode, ViewEdge, EdgeSegment } from '../../model/view-mod
 import DiagramNode from './DiagramNode';
 import DiagramLink from './DiagramLink';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
-import { ZoomIn, ZoomOut, ZoomOutMap } from '@material-ui/icons';
+import { ZoomIn, ZoomOut, ZoomOutMap, AspectRatio } from '@material-ui/icons';
 import { ButtonGroup, Button } from 'react-bootstrap';
 
 export interface DiagramProps {
@@ -71,7 +71,8 @@ class Diagram extends React.Component<DiagramProps> {
             view={view}
             onPlus={this.increaseZoom}
             onMinus={this.decreaseZoom}
-            onZoomToFit={view.zoomToFit} />
+            onZoomToFit={view.zoomToFit}
+            onLayout={(view: ViewModel) => view.layout.apply()} />
           <ContextMenu view={view} />
         </div>
         {/* <p> x: {view.x}, y: {view.y}, w: {view.w}, h: {view.h}, zoom: {view.zoom}</p> */}
@@ -164,6 +165,7 @@ interface IZoomControls {
   onPlus: (view: ViewModel) => void;
   onMinus: (view: ViewModel) => void;
   onZoomToFit: () => void;
+  onLayout: (view: ViewModel) => void;
 }
 
 const ZoomControls: React.FC<IZoomControls> = observer((props) => {
@@ -175,6 +177,8 @@ const ZoomControls: React.FC<IZoomControls> = observer((props) => {
         onClick={(e) => props.onMinus(props.view)} />
       <ZoomOutMap style={{ position: "absolute", top: 5, right: 100 }}
         onClick={(e) => props.onZoomToFit()} />
+      <AspectRatio style={{ position: "absolute", top: 5, right: 140 }}
+      onClick={(e) => props.onLayout(props.view)} />
     </div>
   )
 })

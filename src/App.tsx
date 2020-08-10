@@ -37,8 +37,10 @@ class App extends React.Component {
       <Container fluid>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
           <TitleBar title={title} menuItems={[
-            { label: 'Share', command: this.onLayout },
-            { label: 'Save', command: this.onLayout },
+            { label: 'Undo', command: this.onUndo },
+            { label: 'Redo', command: this.onRedo },
+            { label: 'Load', command: this.onLoad },
+            { label: 'Save', command: this.onSave },
           ]} />
         </Row>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
@@ -62,7 +64,7 @@ class App extends React.Component {
               <Tab eventKey='more' title='More'>
                 <ButtonGroup vertical>
                   <CommandButton label={'Clear'} command={this.onClear} />
-                  <CommandButton label={'Load All'} command={this.onLoad} />
+                  <CommandButton label={'Load All'} command={this.onLoadAll} />
                   <CommandButton label={'Layout'} command={this.onLayout} />
                 </ButtonGroup>
               </Tab>
@@ -89,9 +91,44 @@ class App extends React.Component {
     resolve();
   });
 
-  onLoad: Command = () => {
+  onLoadAll: Command = () => {
     return this.editor.loadModel()
       .then(() => this.editor.view.layout.apply());
+  }
+
+  onLoad: Command = () => {
+    return new Promise<void>((resolve) => {
+      const storedModel = localStorage.getItem('explore model');
+      if (storedModel) {
+        const json = JSON.parse(storedModel);
+        const view = this.editor.view;
+        view.deserialize(json);
+      }
+      resolve();
+    })
+  }
+
+  onSave: Command = () => {
+    return new Promise<void>((resolve) => {
+      const json = this.editor.view.serialize();
+      console.log(json)
+      localStorage.setItem('explore model', JSON.stringify(json));
+      resolve();
+    })
+  }
+
+  onUndo: Command = () => {
+    return new Promise<void>((resolve) => {
+      this.editor.history.previousState();
+      resolve();
+    })
+  }
+
+  onRedo: Command = () => {
+    return new Promise<void>((resolve) => {
+      this.editor.history.nextState();
+      resolve();
+    })
   }
 
   onLayout: Command = () => this.editor.view.layout.apply();

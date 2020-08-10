@@ -13,8 +13,6 @@ export interface IFilterForm extends FormProps {
 export class FilterForm extends React.Component<IFilterForm> {
 
   handleLayerFilterChange = (options: ValueType<{ value: string, label: string }>, meta: ActionMeta) => {
-    console.log(options)
-    console.log(meta)
     if (options instanceof Array) {
       this.props.appState.filter.layers = options.map((option) => option.value);
     }
@@ -54,7 +52,7 @@ export class FilterForm extends React.Component<IFilterForm> {
             onChange={this.handleTypeFilterChange}
             value={activeTypeFilter}
             isMulti
-            closeMenuOnSelect={false} />
+            closeMenuOnSelect={true} />
         </Form.Group>
         <Button variant="primary" type="submit">Filter</Button>
       </Form>
