@@ -50,7 +50,7 @@ export class ExpandForm extends React.Component<IExpandForm> {
               onChange={this.handleRelationFilterChange}
               value={activeRelationFilter}
               isMulti
-              closeMenuOnSelect={false} />
+              closeMenuOnSelect={true} />
             <Form.Group>
               <Form.Check inline key='outgoingCheckbox' name='outgoing' type='checkbox' label='Outgoing' checked={filter.outgoing} onChange={this.toggleCheckbox} />
               <Form.Check inline key='incomingCheckbox' name='incoming' type='checkbox' label='Incoming' checked={filter.incoming} onChange={this.toggleCheckbox} />
