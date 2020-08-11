@@ -123,6 +123,11 @@ class Application extends Editor {
   ];
   @observable filter: Filter = { layers: [], types: [], relations: [], outgoing: true, incoming: false };
 
+  resetFilters = () => {
+    this.query = '';
+    this.filter =  { layers: [], types: [], relations: [], outgoing: true, incoming: false };
+  }
+
   constructor(title: string = '') {
     super(new ArangoRepository());
     this.title = title;

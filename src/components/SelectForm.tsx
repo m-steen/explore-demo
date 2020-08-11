@@ -38,7 +38,8 @@ export class SelectForm extends React.Component<ISelectForm> {
         if (node.isSelected) {
           node.delete();
         }
-      }))
+      }));
+    this.props.editor.resetFilters();
   }
 
   removeUnselected = () => {
@@ -48,7 +49,8 @@ export class SelectForm extends React.Component<ISelectForm> {
         if (!node.isSelected) {
           node.delete();
         }
-      }))
+      }));
+    this.props.editor.resetFilters();
   }
 
   render() {

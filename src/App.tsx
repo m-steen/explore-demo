@@ -9,7 +9,6 @@ import { TitleBar } from './wmf/components/TitleBar';
 import { CommandButton, Command } from './wmf/components/CommandButton';
 import { SearchForm } from './components/SearchForm';
 import { ExpandForm } from './components/ExpandMenu';
-import { FilterForm } from './components/FilterForm';
 import Diagram from './wmf/components/diagram/Diagram';
 import ObjectTable from './wmf/components/data-grid/ObjectTable';
 import { PropertySheet } from './wmf/components/PropertySheet';
@@ -54,9 +53,6 @@ class App extends React.Component {
               </Tab>
               <Tab eventKey="expand" title="Expand">
                 <ExpandForm editor={this.editor} onSubmit={this.onExpandSubmit} />
-              </Tab>
-              <Tab eventKey="filter" title="Filter">
-                <FilterForm appState={this.editor} onSubmit={this.onApplyFilter} />
               </Tab>
               <Tab eventKey="properties" title="Properties">
                 <PropertySheet model={this.editor.view} editor={this.editor} />
@@ -140,8 +136,10 @@ class App extends React.Component {
     const view = this.editor.view;
     transaction(() => {
       this.editor.getObjects(query, filter)
-      .then(() => filter.layers = [])
-      .then(() => view.layout.apply());
+      .then(() => {
+        this.editor.resetFilters();
+        view.layout.apply();
+      });
     })
   }
 
@@ -167,14 +165,16 @@ class App extends React.Component {
           match = match ? match && typeMatch : typeMatch;
         }
         if (match) {
-          this.editor.selectElement(node)
+          this.editor.selectElement(node);
+          this.editor.resetFilters();
         }
       });
-    })
+    });
   }
 
   onClearSelection: Command = () => new Promise((resolve) => {
     this.editor.clearSelection();
+    this.editor.resetFilters();
     resolve();
   });
 
@@ -188,32 +188,19 @@ class App extends React.Component {
     view.edges.filter((edge) => edge.isSelected).forEach((edge) => this.editor.toggleSelection(edge));
     // remember the current selection
     const currentSelection: ViewNode[] = [...view.nodes.filter((node) => node.isSelected)];
-    Promise.all(
-      transaction(() =>
+    transaction(() => {
+      Promise.all(
         currentSelection.map((node) => {
           return this.editor.repository.expandRelations(node, filter, view);
         })
       )
-    )
-    // then deselect the original selection and layout the result
-    .then(() => transaction(() => currentSelection.forEach((node) => this.editor.toggleSelection(node))))
-    .then(() => this.editor.view.layout.apply());
-  }
-
-  onApplyFilter = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const view = this.editor.view;
-    const filter = this.editor.filter;
-    if (filter.layers.length > 0) {
-      view.nodes
-        .filter((n) => !filter.layers.includes(n.layer))
-        .forEach((n) => n.delete());
-    }
-    if (filter.types.length > 0) {
-      view.nodes
-        .filter((n) => !filter.types.includes(n.type))
-        .forEach((n) => n.delete());
-    }
+        // then deselect the original selection and layout the result
+        .then(() => {
+          currentSelection.forEach((node) => this.editor.toggleSelection(node));
+          this.editor.resetFilters();
+          this.editor.view.layout.apply();
+        });
+    });
   }
 
   onExploreObject = (e: React.MouseEvent<HTMLDivElement>, object: MObject) => {

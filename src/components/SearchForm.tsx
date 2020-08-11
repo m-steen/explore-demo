@@ -58,7 +58,7 @@ export class SearchForm extends React.Component<ISearchForm> {
             onChange={this.handleLayerFilterChange}
             value={activeLayerFilter}
             isMulti
-            closeMenuOnSelect={false} />
+            closeMenuOnSelect={true} />
           <Form.Label>Filter on type</Form.Label>
           <Select key='typeSelect' styles={{ container: (provided) => ({ ...provided, width: '100%' }) }}
             placeholder={'Select types...'}
