@@ -147,6 +147,27 @@ class Application extends Editor {
       };
       const exploreObject = new MenuOption('Explore', exploreAction);
       menu.options.push(exploreObject);
+
+      const selectSimilarAction: Command = (node: ViewNode) => new Promise<void>((resolve) => {
+        const type = node.type;
+        this.view.nodes.forEach((node) => {
+          if (type === node.type) {
+            this.selectElement(node);
+          }
+        });
+        this.view.contextMenuActiveFor = null;
+        resolve();
+      });
+      const selectSimilar = new MenuOption('Select similar', selectSimilarAction);
+      menu.options.push(selectSimilar);
+
+      const removeAction: Command = (node: ViewNode) => new Promise<void>((resolve) => {
+        node.delete();
+        resolve();
+      });
+      const removeNode = new MenuOption('Remove', removeAction);
+      menu.options.push(removeNode);
+
       return menu;
     }
   }
