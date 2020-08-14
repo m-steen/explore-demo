@@ -74,6 +74,12 @@ export const PropertySheet: React.FC<PropertySheetProps> = observer((props) => {
       type: 'string',
       value: selectedObjects[0].name,
     },
+    {
+      name: 'type',
+      label: 'Type',
+      type: 'string',
+      value: selectedObjects[0].type,
+    },
   ]
   : [];
   selectedObjects.forEach((obj) => {
