@@ -41,6 +41,13 @@ const compareMoneys: (a: ValueType, b: ValueType) => number =
     return compareNumbers(_a, _b);
   }
 
+const compareDates: (a: ValueType, b: ValueType) => number =
+  (a, b) => {
+    const _a = typeof a == 'string' && a.length > 0 ? Date.parse(a) : 0;
+    const _b = typeof b == 'string' && b.length > 0 ? Date.parse(b) : 0;
+    return compareNumbers(_a, _b);
+  }
+
 const compareStrings: (a: ValueType, b: ValueType) => number =
   (a, b) => {
     let left: string;
@@ -104,8 +111,8 @@ function selectFilter(propType: PropertyType) {
       return BooleanFilter;
     case "number":
     case "money":
-    case "date":
       return NumericFilter;
+    case "date":
     case "string":
     case "rtf":
     case "enum":
@@ -146,6 +153,8 @@ const applyPropertyFilters = (row: MObject, filters: Filters) => {
         case "number":
         case "money":
           return filters[key].filterValues(row, filters[key], key);
+        case "date":
+          return (prop.value as string).length >= filters[key].length && (prop.value as string).includes(filters[key]);
         default:
           return true;
       }
@@ -323,12 +332,12 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
               sortedRows = sortedRows.sort((a, b) => compareMoneys(a.getPropertyValue(sortColumn), b.getPropertyValue(sortColumn)));
               break;
             case "date":
-              sortedRows = sortedRows.sort((a, b) => compareNumbers(a.getPropertyValue(sortColumn), b.getPropertyValue(sortColumn)));
+              sortedRows = sortedRows.sort((a, b) => compareDates(a.getPropertyValue(sortColumn), b.getPropertyValue(sortColumn)));
+              break;
+            case "enum":
+              sortedRows = sortedRows.sort((a, b) => compareStrings((a.getPropertyValue(sortColumn) as Enum)?.name, (b.getPropertyValue(sortColumn) as Enum)?.name));
               break;
             default:
-              if (Property.isEnum(prop.type)) {
-                sortedRows = sortedRows.sort((a, b) => compareStrings((a.getPropertyValue(sortColumn) as Enum)?.name, (b.getPropertyValue(sortColumn) as Enum)?.name));
-              }
               break;
           }
         }

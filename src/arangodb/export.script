@@ -648,10 +648,6 @@ function attrsToDocs(object)
 			id = getArangoDBId(object);
 			doc = Structure("type", "profile", "name", attrProfile.name().toString(), "label", translate(attrProfile), "_from", id, "_to", id);
 		}
-		if (attr.type() == "date") {
-			attrValue = Component.utils.date:theDateInDays(attrValue);
-//			attrValue = attrValue < 0 ? 0 : attrValue;
-		}
 		type = attr.category();
 			if (type == "real" || type == "integer") {
 				type = "number";
@@ -660,7 +656,7 @@ function attrsToDocs(object)
 			elementType = Component.reflect:profileTypeDefinition(attr.type()).elementType().category();
 			type = List(elementType);
 		}
-		if (type == "objectref" || (type.isList() && type[1] == "objectref")) {
+		if (type == "objectref" || ((type.isList() || type.isSet()) && type[1] == "objectref")) {
 			continue;
 		}
 		doc.add(attrName, Structure("name", attrName, "type", type , "value", attrValue, "label", translate(attr)));
@@ -693,6 +689,7 @@ function metricsToDoc(object)
 			}
 			if (type.contains("Enum")) {
 				type = "enum";
+				value = Structure("name", value, "value", "0");
 			}
 			doc.add(metricIdentifier, Structure("name", metricIdentifier, "type", type, "value", value, "label", metric.attrValue("nm")));
 			output metricIdentifier, metric.attrValue("metricType").name(), value;

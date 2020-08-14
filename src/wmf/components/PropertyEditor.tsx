@@ -25,8 +25,13 @@ function stringifyPropValue(property: IProperty): string {
         rtf = rtf.replace(/\{\*?\\[^{}]+}|[{}]|\\\n?[A-Za-z]+\n?(?:-?\d+)?[ ]?/g, "")
         return rtf.replace(/\\'[0-9a-zA-Z]{2}/g, "").trim();
     }
-    case "date":
-      return dateFormatter.format(property.value as number);
+    case "date": {
+      const value = property.value as string;
+      if (value.length === 0 || value === '0-00-00') {
+        return '';
+      }
+      return dateFormatter.format(new Date(value));
+    }
     case "money": {
       const currencyFormatter = new Intl.NumberFormat(navigator.language, {
         style: 'currency',
