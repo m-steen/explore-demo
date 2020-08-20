@@ -1,0 +1,1600 @@
+function toGraph(scope, graphName)
+{
+	// Model information
+	objectDocs = List();				// Documents representing objects
+	relationDocs = List();				// Documents representing relations
+	parentChildDocs = List();			// Documents representing parent-child relations
+
+	// Metamodel information
+	typeName2Attrs = Index();			// Attributes used per object/relation type
+	typeName2Metrics = Index();			// Metrics used per object/relation type
+	objectTypeNames = Set();			// Collection of object types handled so far
+	objectTypeDocs = List();			// Documents representing object types
+	relationTypeNames = Set();			// Collection of relation types handled so far
+	relationTypeDocs = List();			// Documents representing relation types
+	extensions = Set();					// Collection representing extends relationships handled so far
+	extendsDocs = List();				// Documents representing extends relations
+	
+	// Model-MetaModel information
+	isADocs = List();					// Documents representing isA relation
+
+	scopes = scope.isList() || scope.isSet() ? scope : List(scope);
+	forall scope in scopes
+	{
+		forall object in scope
+		{
+			if ( object is "ArchiMate:AbstractCompound" || object is "ArchiMate:AbstractElement" || object is "ArchiMate:AbstractMember" 
+					|| object is "ArchiMate:AbstractRelation"
+					|| (object is "ArchiMate:AbstractScheme" && !(object is "ArchiMate:AbstractView")) || object is "ArchiMate:AbstractFolder" 
+					|| object is "MM_Model" || object is "MM_Folder" || object is "MM_ModelPackage" )
+			{
+				typeInfo = getTypeInfo(object);
+				typeName = typeInfo.typeName;
+				domain = typeInfo.domain;
+				metaModel = typeInfo.metaModel;
+
+//				if ( metaModel != "ArchiMate" ) continue;
+				
+				isRelation = object is "AbstractRelation";
+			
+				if ( isRelation )
+				{
+					if ( !relationTypeNames.contains(typeName) )
+					{
+						relationTypeDocs.add(relationTypeToDoc(typeInfo));
+						relationTypeNames.add(typeName);
+					}
+					relationDocs.add(relationToDoc(object, metaModel, typeName, domain, typeName2Attrs, typeName2Metrics));
+				}
+				else
+				{
+					if ( !objectTypeNames.contains(typeName) )
+					{
+						objectTypeDocs.add(objectTypeToDoc(typeInfo));
+						objectTypeNames.add(typeName);
+					}
+					objectDocs.add(objectToDoc(object, metaModel, typeName, domain, typeName2Attrs, typeName2Metrics));
+				}
+				
+				isADocs.add(Structure("_kind", "isA",
+									  "_from", getArangoId(object, graphName), 
+									  "_to", getArangoTypeId(metaModel+":"+typeName, graphName)));
+									  
+				if ( object.parent() != undefined )
+				{
+					parentChildDocs.add(Structure("_kind", "parentChild",
+												  "_from", getArangoId(object, graphName), 
+												  "_to", getArangoId(object.parent(), graphName)));
+				}
+				
+				typeChain = typeInfo.extends;
+				l = typeChain.size();
+				i = 1;
+				forall subType in typeChain
+				{
+					if ( i < l )
+					{
+						superType = typeChain[i+1];
+						key = Pair(subType, superType);
+						if ( !extensions.contains(key) )
+						{
+							extendsDocs.add(Structure("_kind", "extends",
+													  "_from", getArangoTypeId(metaModel+":"+subType, graphName), 
+													  "_to", getArangoTypeId(metaModel+":"+superType, graphName)));
+							extensions.add(key);
+						}
+					}
+					i = i + 1;
+				}
+			}
+		}	
+	}
+	
+	// Profile and property definitions
+	profileDefs = Set();			// Profile definitions handled so far
+	profileDefDocs = List();		// Documents representing profile definitions
+	propertyDefs = Set();			// Property definitions handled so far
+	propertyDefDocs = List();		// Documents representing property definitions
+	assignDocs = List();			// Documents representing 'assigned' relation between profile definition and object/relation type
+	containDocs = List();			// Documents representing 'contains' relation between profile definitions and property definitions
+	
+	forall typeName, attrs in typeName2Attrs
+	{
+		forall attr in attrs
+		{
+			profileDef = attr.profile();
+			if ( !profileDefs.contains(profileDef) )
+			{
+				profileDefDocs.add(profileDefinitionToDoc(profileDef));
+				profileDefs.add(profileDef);
+				assignDocs.add(Structure(
+										 "_kind", "assigned",
+										 "_from", getArangoTypeId(typeName, graphName),
+										 "_to", getArangoProfileId(profileDef.name(), graphName)
+										));
+			}
+			
+			if ( !propertyDefs.contains(attr) )
+			{
+				propertyDefDocs.add(attributeDefinitionToDoc(attr));
+				propertyDefs.add(attr);
+				containDocs.add(Structure(
+										  "_kind", "contains",
+										  "_from", getArangoProfileId(profileDef.name(), graphName),
+										  "_to", getArangoPropertyId(attr.name(), graphName)
+										 ));
+			}
+		}
+	}
+	
+	forall typeName, metrics in typeName2Metrics
+	{
+		forall metric in metrics
+		{
+			metricName = metric.hasUserValue("identifier") ? metric.attrValue("identifier") : metric.attrValue("nm");
+			
+			profileDef = metric.parent("MotivationScheme");
+			if ( !profileDefs.contains(profileDef) )
+			{
+				profileDefDocs.add(metricSchemeToDoc(profileDef));
+				profileDefs.add(profileDef);
+			}
+			
+			if ( !propertyDefs.contains(metric) )
+			{
+				propertyDefDocs.add(metricDefinitionToDoc(metric));
+				propertyDefs.add(metric);
+				containDocs.add(Structure(
+										  "_kind", "contains",
+										  "_from", getArangoProfileId(profileDef.name(), graphName),
+										  "_to", getArangoPropertyId(metricName, graphName)
+										 ));
+				assignDocs.add(Structure(
+										 "_kind", "assigned",
+										 "_from", getArangoTypeId(typeName, graphName),
+										 "_to", getArangoPropertyId(metricName, graphName)
+										));
+			}
+		}
+	}
+	
+	// Export metamodel
+	collections = List(	Structure("name", graphName+"_Types", "type", "document"), 
+						Structure("name", graphName+"_Inheritance", "type", "edge"), 
+						Structure("name", graphName+"_Profiles", "type", "document"), 
+						Structure("name", graphName+"_Properties", "type", "document"), 
+						Structure("name", graphName+"_Assignment", "type", "edge"), 
+						Structure("name", graphName+"_Containment", "type", "edge")
+						);		
+	ok = prepareCollections(collections);
+	if ( ok )
+	{
+		newTypeDocs = undefined;
+		addNewDocuments(objectTypeDocs/* + relationTypeDocs*/, graphName+"_Types", undefined, newTypeDocs);
+
+		newExtendsDocs = undefined;
+		addNewDocuments(extendsDocs, graphName+"_Inheritance", undefined, newExtendsDocs);
+
+		newProfileDefDocs = undefined;
+		addNewDocuments(profileDefDocs, graphName+"_Profiles", undefined, newProfileDefDocs);
+
+		newPropertyDefDocs = undefined;
+		addNewDocuments(propertyDefDocs, graphName+"_Properties", undefined, newPropertyDefDocs);
+
+		newAssignDocs = undefined;
+		addNewDocuments(assignDocs, graphName+"_Assignment", undefined, newAssignDocs);
+
+		newContainDocs = undefined;
+		addNewDocuments(containDocs, graphName+"_Containment", undefined, newContainDocs);
+	}	
+	
+	// Export model
+	collections = List(	Structure("name", graphName+"_Objects", "type", "document"), 
+						Structure("name", graphName+"_Relations", "type", "edge"), 
+						Structure("name", graphName+"_ParentChild", "type", "edge"));
+	ok = prepareCollections(collections);
+	if ( ok )
+	{
+		newObjectDocs = undefined;
+		addNewDocuments(objectDocs, graphName+"_Objects", undefined, newObjectDocs);
+		
+		newRelationDocs = undefined;
+		addNewDocuments(relationDocs, graphName+"_Relations", undefined, newRelationDocs);
+		
+		newParentChildDocs = undefined;
+		addNewDocuments(parentChildDocs, graphName+"_ParentChild", undefined, newParentChildDocs);
+	}
+	
+	// Export model - metamodel
+	collections = List(	Structure("name", graphName+"_IsA", "type", "edge"));		
+	ok = prepareCollections(collections);
+	if ( ok )
+	{
+		newIsADocs = undefined;
+		addNewDocuments(isADocs, graphName+"_IsA", undefined, newIsADocs);
+	}	
+}
+
+function objectToDoc(object, 
+					 metaModel,
+					 typeName,
+					 domain,
+					 byref typeName2Attrs, 
+					 byref typeName2Metrics)
+{
+	id = object.id();
+	name = hasNameAsMember(object) ? object.nm : object.attrValue("nm");
+	
+	doc = Structure(
+					"_key", id,	// Arango specific
+					"_kind", "object",
+					
+					"id", id,
+					
+					"_name", name,
+					"_metaModel", metaModel,
+					"_type", typeName, 
+					"_domain", domain,
+					"_isContainer", isContainer(object)
+				   );
+					
+	attrsToDoc(object, doc, metaModel, typeName, typeName2Attrs);
+	metricsToDoc(object, doc, metaModel, typeName, typeName2Metrics);
+	return doc;
+}
+
+function objectTypeToDoc(typeInfo)
+{
+	fullTypeName = typeInfo.metaModel+":"+typeInfo.typeName;
+	label = translate(fullTypeName);
+	synonyms = List(label) + getSynonyms(fullTypeName);
+	doc = Structure(
+					"_key", fullTypeName,		// Arango specific
+					"_kind", "objectType", 
+					
+					"id", fullTypeName,
+					"name", typeInfo.typeName, 
+					"label", label,
+					"synonyms", synonyms,
+					"domain", typeInfo.domain
+				   );
+	return doc;
+}
+
+function relationToDoc(object, 
+					   metaModel,
+					   typeName,
+					   domain,
+					   byref typeName2Attrs, 
+					   byref typeName2Metrics)
+{
+	doc = objectToDoc(object, metaModel, typeName, domain, typeName2Attrs, typeName2Metrics);
+	doc.add("_kind", "relation");
+	doc.add("_from", getArangoId(object.from, graphName));
+	doc.add("_to", getArangoId(object.to, graphName));
+	return doc;
+}
+
+function relationTypeToDoc(typeInfo)
+{
+	doc = objectTypeToDoc(typeInfo);
+	doc.add("_kind", "relationType");
+	return doc;
+}
+
+function profileDefinitionToDoc(profile)
+{
+	profileName = profile.name();
+	profileLabel = translate(profile);
+	profileType = "profile";
+	doc = Structure(
+					"_key", profileName,
+					"name", profileName, 
+					"label", profileLabel, 
+					"type", profileType
+					);
+	return doc;
+}
+
+
+function metricSchemeToDoc(scheme)
+{
+	profileName = scheme.name();
+	profileLabel = scheme.toString();
+	profileType = "metric";
+	doc = Structure(
+					"_key", profileName,
+					"name", profileName, 
+					"label", profileLabel, 
+					"type", profileType
+					);
+	return doc;
+}
+
+function attributeDefinitionToDoc(attr)
+{
+	attrName = attr.name();
+	attrCategory = attr.category();
+	attrLabel = translate(attr);
+	attrTypeName = attr.type();
+	doc = Structure(
+					"_key", attrName, 
+					"name", attrName, 
+					"label", attrLabel, 
+					"category", attrCategory, 
+					"type", attrTypeName
+					);
+	if ( attrCategory == "enum" )
+	{
+		enumValues = Component.reflect:enumValues(attrTypeName);
+		if ( enumValues.isList() )
+		{
+			_enumValues = List();
+			forall enumValue in enumValues
+			{
+				_enumValues.add(enumValue.toString());
+			}
+			doc.add("enumValues", _enumValues);
+		}
+	}
+	return doc;
+}
+
+function metricDefinitionToDoc(metric)
+{
+	metricName = metric.hasUserValue("identifier") ? metric.attrValue("identifier") : metric.attrValue("nm");
+	metricCategory = ArchiMate.metricDefinitionView.utils:metricCategory(metric);
+	metricLabel = metric.toString();
+	metricTypeName = ArchiMate.metricDefinitionView.utils:metricTypeName(metric);
+	doc = Structure(
+					"_key", metricName,
+					"name", metricName, 
+					"label", metricLabel, 
+					"category", metricCategory, 
+					"type", metricTypeName
+					);
+	if ( metricCategory == "enum" )
+	{
+		enumValues = ArchiMate.metricDefinitionView.utils:enumValues(metric);
+		if ( enumValues.isList() )
+		{
+			_enumValues = List();
+			forall enumValue in enumValues
+			{
+				_enumValues.add(enumValue.toString());
+			}
+			doc.add("enumValues", _enumValues);
+		}
+	}
+	return doc;
+}
+
+function attrsToDoc(object, byref doc, metaModel, typeName, byref typeName2Attrs)
+{
+	// Note: timed attributes are ignored
+	
+	forall attr in object.attrs()
+	{
+		attrName = attr.name();
+		attrLabel = translate(attr);
+		
+		// For now it is assumed that an attribute is used iff it is assigned.
+		// Alternatively, one could say it is used iff a user-defined value has been defined. However, the user may rely on default values.
+		
+		if ( doc.contains(attrLabel) )
+		{
+			message format("Duplicate property '%s' for object '%s'", attrLabel, object);
+			continue;
+		}
+		
+		// Attribute data
+		attrType = attr.type();
+		attrCategory = attr.category();
+		value = object.attrValue(attrName);
+		
+		rawValue = value.isMoney()
+					? value.amount
+					: value.isInteger() || value.isReal()
+						? value
+						: value.isDate()
+							? dateToString(value, "yyyy-mm-dd")
+							: value.toString();
+		
+		doc.add(attrLabel, Structure(
+									 "name", attrName, 
+									 "label", attrLabel, 
+									 "value", value, 
+									 "rawValue", rawValue,
+									 "type", attrType, 
+									 "category", attrCategory)
+								    );
+
+		// Register attribute as being used by the object type		
+		fullTypeName = metaModel + ":" + typeName;
+		_attrs = typeName2Attrs.valueFor(fullTypeName);
+		if ( _attrs == undefined ) _attrs = Set();
+		_attrs.add(attr);
+		typeName2Attrs.add(fullTypeName, _attrs);	
+	}
+}
+
+function metricsToDoc(object, byref doc, metaModel, typeName, byref typeName2Metrics)
+{
+	// Note: timed metrics are ignored
+	
+	forall "MotivationMetric" metric in object.taggedValueReferrals("assessments")
+	{
+		metricTypeName = ArchiMate.metricDefinitionView.utils:metricTypeName(metric);
+		metricCategory = ArchiMate.metricDefinitionView.utils:metricCategory(metric);
+
+		value = undefined;
+		ok = ArchiMate.metrics:metricValue(object, metric, value);
+		if ( ok )
+		{
+			metricIdentifier = metric.hasUserValue("identifier") ? metric.attrValue("identifier") : metric.attrValue("nm");
+			
+			if ( doc.contains(metricIdentifier) )
+			{
+				message format("Duplicate property '%s' for object '%s'", metric, object);
+				message doc.valueFor(metricIdentifier).toString();
+				continue;
+			}
+			
+			rawValue = value.isMoney() 
+						? value.amount
+						: value.isInteger() || value.isReal()
+							? value
+							: value.isDate()
+								? dateToString(value, "yyyy-mm-dd")
+								: value.toString();
+							
+			doc.add(metricIdentifier, Structure(
+												  "name", metricIdentifier, 
+												  "label", metric.attrValue("nm"), 
+												  "value", value, 
+												  "rawValue", rawValue,
+												  "type", metricTypeName, 
+												  "category", metricCategory
+												  ));
+		}
+		
+		// Register metric as being used by the object type		
+		fullTypeName = metaModel + ":" + typeName;
+		_metrics = typeName2Metrics.valueFor(fullTypeName);
+		if ( _metrics == undefined ) _metrics = Set();
+		_metrics.add(metric);
+		typeName2Metrics.add(fullTypeName, _metrics);
+	}
+}
+
+function getTypeInfo(object)
+{
+	typeNames = List();	// Collect all types
+	typeName = undefined;
+	isRelation = object is "AbstractRelation";
+	
+	config= InternalObject("configuration").context(modelpackage); 	
+	metaModelName = object.metaModel();
+	metaModel = config.metaModel(metaModelName);
+	
+	fullTypeName = object.type().name();
+	conceptName = fullTypeName.split(":")[2];
+	if ( !metaModel.definesConcept(conceptName) )
+	{
+		error "Concept not found for object: " + object;
+		return List();
+	}
+	concept = metaModel.concept(conceptName);
+	
+	index = 1;
+	while ( concept != undefined )
+	{
+		_typeName = concept.name();
+		typeNames.add(_typeName);
+
+		// Look ahead
+		concept	= concept.baseConcept();
+		
+		if ( isRelation )
+		{
+			// Select the basic relation type (not the most specific one)
+			if ( concept != undefined && concept.name() == "AbstractRelation" )
+			{
+				// Only works if a 'basic relation' is not a specialization of another basic relation.
+				typeName = _typeName;
+			}
+		}
+		else 
+		{
+			// Select the most specific type
+			if ( typeName == undefined )
+			{
+				typeName = _typeName;
+			}
+		}
+		index = index + 1;
+	}
+
+	if ( typeName == undefined )
+	{
+		error "Cannot determine type of object: " + object;
+	}
+	return Structure("typeName", typeName, 
+					 "metaModel", metaModelName,
+					 "extends", typeNames,
+					 "concept", concept,
+					 "domain", getDomain(object),
+					 "isRelation", isRelation);
+}
+
+function getDomain(object)
+{
+	objectDomainName = "None";
+	mmName = object.metaModel();
+	if ( mmName == "ArchiMate" )
+	{
+		objectTypeName = object.type().name().replace(mmName+":", "");
+		tSize = objectTypeName.size();
+		forall domainName in domainNames()
+		{
+			dSize = domainName.size();
+			if ( tSize >= dSize && objectTypeName.substring(1, dSize) == domainName )
+			{
+				objectDomainName = domainName;
+				break;
+			}
+		}
+	}
+	return objectDomainName;
+}
+
+function domainNames()
+{
+	return List("Motivation", "Strategy", "Business", "Application", "Technology", "IM", "Composite", "RS");
+}
+
+function isContainer(object)
+{
+	return object is "AbstractScheme" || object is "AbstractFolder" || object is "MM_Model"
+			|| object is "MM_Folder" || object is "MM_ModelPackage";
+}
+
+function hasNameAsMember(object)
+{
+	return object is "MM_Folder" || object is "MM_ModelPackage" || object is "AbstractFolder";
+}
+
+function getArangoId(object, graphName)
+{
+	if ( object is "AbstractRelation" )
+	{
+		return graphName+"_Relations" + "/" + object.id(); 
+	}
+	else 
+	{
+		return graphName+"_Objects" + "/" + object.id(); 
+	}
+}
+
+function getArangoTypeId(fullTypeName, graphName)
+{
+	return graphName+"_Types" + "/" + fullTypeName; 
+}
+
+function getArangoPropertyId(propertyName, graphName)
+{
+	return graphName+"_Properties" + "/" + propertyName; 
+}
+
+function getArangoProfileId(profileName, graphName)
+{
+	return graphName+"_Profiles" + "/" + profileName; 
+}
+
+function getSynonyms(fullTypeName)
+{
+	if ( fullTypeName == "ArchiMate:MotivationStakeholder" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationDriver" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationAssessment" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationGoal" )		return List("Objective");
+	if ( fullTypeName == "ArchiMate:MotivationOutcome" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationPrinciple" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationRequirement" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationConstraint" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationValue" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationMeaning" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationMetric" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationOptions" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationRecommendation" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationGuideline" )		return List();
+	if ( fullTypeName == "ArchiMate:MotivationUseCase" )		return List();
+	if ( fullTypeName == "ArchiMate:StrategyResource" )		return List();
+	if ( fullTypeName == "ArchiMate:StrategyCapability" )		return List();
+	if ( fullTypeName == "ArchiMate:StrategyCourseOfAction" )		return List();
+	if ( fullTypeName == "ArchiMate:StrategyValueStream" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessActor" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessRole" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessCollaboration" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessInterface" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessService" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessProcess" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessFunction" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessInteraction" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessEvent" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessObject" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessContract" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessRepresentation" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessProduct" )		return List();
+	if ( fullTypeName == "ArchiMate:BusinessActivity" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationComponent" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationCollaboration" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationInterface" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationService" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationProcess" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationFunction" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationInteraction" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationEvent" )		return List();
+	if ( fullTypeName == "ArchiMate:ApplicationDataObject" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyArtifact" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyInterface" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyService" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyEvent" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyNode" )		return List("Device", "Technology");
+	if ( fullTypeName == "ArchiMate:TechnologySystemSoftware" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyDevice" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyCollaboration" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyPath" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyFunction" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyProcess" )		return List();
+	if ( fullTypeName == "ArchiMate:TechnologyInteraction" )		return List();
+	if ( fullTypeName == "ArchiMate:IMWorkpackage" )		return List("Project");
+	if ( fullTypeName == "ArchiMate:IMImplementationEvent" )		return List();
+	if ( fullTypeName == "ArchiMate:IMProgram" )		return List();
+	if ( fullTypeName == "ArchiMate:IMDeliverable" )		return List();
+	if ( fullTypeName == "ArchiMate:IMPlateau" )		return List();
+	if ( fullTypeName == "ArchiMate:IMGap" )		return List();
+	if ( fullTypeName == "ArchiMate:PhysicalMaterial" )		return List();
+	if ( fullTypeName == "ArchiMate:PhysicalFacility" )		return List();
+	if ( fullTypeName == "ArchiMate:PhysicalEquipment" )		return List();
+	if ( fullTypeName == "ArchiMate:PhysicalDistributionNetwork" )		return List();
+	if ( fullTypeName == "ArchiMate:CompositeGrouping" )		return List();
+	if ( fullTypeName == "ArchiMate:CompositeLocation" )		return List();
+	if ( fullTypeName == "ArchiMate:RSThreatEvent" )		return List();
+	if ( fullTypeName == "ArchiMate:RSLossEvent" )		return List();
+	if ( fullTypeName == "ArchiMate:RSThreatAgent" )		return List();
+	if ( fullTypeName == "ArchiMate:RSSecurityDomain" )		return List();
+	if ( fullTypeName == "ArchiMate:RSVulnerability" )		return List();
+	if ( fullTypeName == "ArchiMate:RSRisk" )		return List();
+	if ( fullTypeName == "ArchiMate:RSControlMeasure" )		return List();
+	if ( fullTypeName == "ArchiMate:RSControlObjective" )		return List();
+	if ( fullTypeName == "ArchiMate:RSSecurityPrinciple" )		return List();
+	return List();
+}
+
+function dateToString( date, format )
+{
+	if ( format == "yyyy-mm-dd" )
+	{
+		year	= date.year.toString();
+		month	= date.month.toString();
+		if ( month.size() < 2 ) month = "0" + month;
+		day		= date.day.toString();
+		if ( day.size() < 2 ) day = "0" + day;
+		return year + "-" + month + "-" + day;
+	}
+	else
+	{
+		return date.toString();
+	}
+}
+
+////////////////////////////////////////////////////////
+// ARANGO
+////////////////////////////////////////////////////////
+
+function prepareCollections(collections)
+{
+	existingCollections = undefined;
+	existingCollectionsJSON = undefined;
+	ok = getCollections(existingCollections, existingCollectionsJSON);
+	
+	forall collection in collections
+	{
+		if ( existsCollection(collection.name, existingCollections) )
+		{
+			ok = ok && dropCollection(collection.name);
+		}
+	}
+	
+	forall collection in collections
+	{
+		ok = ok && createCollection(collection.name, collection.type, undefined);
+	}
+	
+	return ok;	
+}
+
+function getDocument(docId, options, byref doc)
+{
+	method = "GET";
+	url = getServerURL() + "_api/document/" + docId;
+	body = undefined;
+	status = undefined;
+	response = undefined;
+	responseJSON = undefined;
+	logFile = undefined;
+	err = undefined;
+	
+	ok = request(method, url, body, undefined, status, response, responseJSON);	
+	if ( ok )
+	{
+		doc = response;
+	}
+	else
+	{
+		error "arrangodb:getDocument - " + status;
+	}
+	return ok;
+}
+
+function addNewDocuments(docs, collection, options, byref newDocs)
+{
+	ok = true;
+	
+	i = 1;
+	n = docs.size();
+	while ( i <= n )
+	{
+		_docs = List();
+		n2 = min(i + 999, n);
+		while ( i <= n2 ) 
+		{
+			_docs.add(docs[i]);
+			
+			i = i + 1;
+		}
+		
+		method = "POST";
+		url = getServerURL() + "_api/document/" + collection;
+		if ( options.isStructure() )
+		{
+			query = "";
+			if ( options.contains("returnNew") && options.returnNew == true )
+			{
+				if ( !query.empty() ) query.add("&");
+				query.add("returnNew=true");
+			}
+			
+			if ( !query.empty() )
+			{
+				url.add("?");
+				url.add(query);
+			}
+		}
+		status = undefined;
+		response = undefined;
+		responseJSON = undefined;
+		body = _docs;
+		
+		ok = request(method, url, body, undefined, status, response, responseJSON);	
+		if ( ok )
+		{
+			newDocs = response;
+		}
+		else
+		{
+			error "arrangodb:addNewDocuments: " + status;
+		}
+	}
+	return ok;
+}
+
+function getCollections(byref collections, byref collectionsJSON)
+{
+	method = "GET";
+	url = getServerURL() + "_api/collection";
+	body = undefined;
+	status = undefined;
+	response = undefined;
+	responseJSON = undefined;
+	
+	ok = request(method, url, body, undefined, status, response, responseJSON);	
+	if ( ok )
+	{
+		collections = List();
+		forall element in response.result
+		{
+			if ( element.name.size() > 0 && element.name[1] != "_" ) 
+			{
+				collections.add(element.name);
+			}
+		}
+		collectionsJSON = responseJSON;
+	}
+	else
+	{
+		error "arrangodb:dropCollection - " + status;
+	}
+	return ok;
+}
+
+function createCollection(collection, type, options)
+{
+	_type = type == "document" ? 2 : type == "edge" ? 3 : 0;
+	if ( _type == 0 )
+	{
+		error "arrangodb:createCollection: invalid collection type: " + type;
+	}
+	method = "POST";
+	url = getServerURL() + "_api/collection";
+	body = Structure("name", collection, "type", _type);
+	status = undefined;
+	response = undefined;
+	responseJSON = undefined;
+	
+	ok = request(method, url, body, undefined, status, response, responseJSON);	
+	if ( ok )
+	{
+		message "Created collection " + collection;
+	}
+	else
+	{
+		error "arrangodb:createCollection - " + status;
+	}
+	return ok;
+}
+
+function existsCollection(collection, collections)
+{
+	if ( collections == undefined || collections.empty() )
+	{
+		collectionsJSON = undefined;
+		if( !getCollections(collections, collectionsJSON) )
+		{
+			return false;
+		}
+	}
+	return collections.contains(collection);
+}
+
+function dropCollection(collection)
+{
+	method = "DELETE";
+	url = getServerURL() + "_api/collection/" + collection;
+	body = undefined;
+	status = undefined;
+	response = undefined;
+	responseJSON = undefined;
+	
+	ok = request(method, url, body, undefined, status, response, responseJSON);	
+	if ( ok )
+	{
+		message "Dropped collection " + collection;
+	}
+	else
+	{
+		error "arrangodb:dropCollection - " + status;
+	}
+	return ok;
+}
+
+function getServerURL()
+{
+	return "http://172.16.148.1:8529/";
+	//return "http://big.bizzdesign.io:8529/_db/ssa/";
+}
+
+function getSettings()
+{
+	return Structure();
+}
+
+function getHeaders()
+{
+	return Structure("content-type", "application/json", 
+					 "accept", "application/json",
+					 "if-modified-since", "Sat, 1 Jan 2000 00:00:00 GMT");
+}
+
+function getAuthentication()
+{
+	return Structure("type", "None");
+}
+
+function getHTTPObject(holder, byref xmlHttp)
+{
+	xmlHttp = undefined;
+	if ( holder.isObject() )
+	{
+		xmlHttp = holder.getTaggedValue("_XMLHTTP_");
+	}
+	if ( xmlHttp == undefined )
+	{
+		xmlHttp = ExternalObject("MSXML2.XMLHTTP");
+		if ( xmlHttp == undefined )
+		{
+			message "Failed to create HTTP object.";
+		}
+	}
+	return xmlHttp != undefined;
+}
+
+function request(method, url, body, bodyJSON, byref status, byref response, byref responseJSON)
+{
+	httpObject = undefined;
+	if ( !getHTTPObject(modelpackage, httpObject) ) 
+	{
+		return false;
+	}
+	
+	async = false;
+	auth = getAuthentication();
+	doAuth = auth.isStructure() && auth.type != "None";
+	username = doAuth && auth.type == "Basic" ? auth.username : undefined;
+	password = doAuth && auth.type == "Basic" ? auth.password : undefined;
+
+	writeToDebugLog("HTTP " + method + " " + url);
+
+	// Open connection
+	//
+	session "continue on external error" true;
+	httpObject.clearError();
+	if ( username != undefined && password != undefined )
+	{
+		httpObject.open(method, url, async, username, password);	
+	}
+	else
+	{
+		httpObject.open(method, url, async);	
+	}
+	session "continue on external error" false;
+	if ( httpObject.hasError() )
+	{
+		writeToDebugLog("ERROR: " + httpObject.getError());
+		return false;
+	}
+	
+	headers = getHeaders();
+	headers.add("Authorization", "Basic " +  InternalObject("client").utils().toBase64(username+":"+password));
+	forall headerName, headerValue in headers
+	{
+		httpObject.setRequestHeader(headerName, headerValue);
+	}
+	
+	// Send message
+	//
+	if ( bodyJSON == undefined && body != undefined )
+	{
+		err = undefined;
+		ok = encodeJSON(body, bodyJSON, err);
+		if ( !ok )
+		{
+			message "encode error: " + err;
+			writeToDebugLog("ERROR");
+			writeToDebugLog("ERROR: " + err);
+			writeToDebugLog("ERROR: Cannot encode body ( " + err + ")\n" + body);
+			writeToDebugLog("ERROR");
+			writeToDebugLog("ERROR");
+			return false;
+		}
+	}
+
+	session "continue on external error" true;
+	httpObject.clearError();
+	if ( bodyJSON.isString() && !bodyJSON.trim().empty() )
+	{
+		writeToDebugLog("Body: " + bodyJSON);
+		httpObject.send(bodyJSON);	
+	}
+	else
+	{
+		httpObject.send();
+	}
+	session "continue on external error" false;
+	if ( httpObject.hasError() )
+	{
+		writeToDebugLog("ERROR: " + xmlHttp.getError());
+		return false;
+	}
+	
+	statusCode = httpObject.status();
+	status = statusCode + " - " + httpObject.statusText();
+	
+	writeToDebugLog("Status: " + status);
+	
+	if ( statusCode < 200 || statusCode > 202 )
+	{
+		return false;
+	}
+	
+	responseJSON = httpObject.responseText();
+	writeToDebugLog("Response (JSON): " + responseJSON);
+	
+	ok = true;
+	if ( responseJSON.isString() && !responseJSON.trim().empty() )
+	{
+		response = undefined;
+		err = undefined;
+		ok = decodeJSON(responseJSON, response, undefined, err);
+		writeToDebugLog(ok ? ("Response: " + response) : "ERROR: Cannot interpret response");
+	}
+	return ok;
+}
+
+////////////////////////////////////////////////////////
+// JSON
+////////////////////////////////////////////////////////
+
+function encodeJSON( element, byref result, byref err )
+{
+	result	= undefined;
+	level	= 0;
+	
+	if ( element.isStructure() )
+	{
+		return encodeObject( element, result, err );
+	}
+	else if ( element.isList() || element.isSet() )
+	{
+		return encodeArray( element, result, err );
+	}
+	else if ( element.isString() )
+	{
+		return encodeString( element, result, err );
+	}
+	else if ( element.isReal() || element.isInteger() )
+	{
+		return encodeNumber( element, result, err );
+	}
+	else if ( element.isMoney() )
+	{
+		return encodeMoney( element, result, err );
+	}
+	else if ( element.isBoolean() )
+	{
+		return encodeBoolean( element, result, err );
+	}
+	else if ( element.isUndefined() )
+	{
+		result	= "null";
+		return true;
+	}
+	else if ( element.isDate() )
+	{
+		return encodeDate( element, result, err );
+	}
+	else if ( element.isEnum() )
+	{
+		return encodeEnum( element, result, err );
+	}
+	else if ( element.isPair() )
+	{
+		return encodePair( element, result, err );
+	}
+	else if ( element.isObject() )
+	{
+		return encodeObjectRef( element, result, err );
+	}
+	else if ( element.isGUID() )
+	{
+		return encodeGUID( element, result, err );
+	}
+	else if ( element.isTime() )
+	{
+		return encodeTime( element, result, err );
+	}
+	else if ( element.isRtf() )
+	{
+		return encodeString( element.toString(), result, err );
+	}
+	else
+	{
+		message "Invalid element: " + element;
+		
+		return encodeString( element.toString(), result, err );
+		//err = "Invalid element";
+		//return false;
+	}
+}
+
+function encodeObject( element, byref result, byref err )
+{
+	result	= "{ ";
+	forall key, value in element
+	{
+		keyString	= undefined;
+		ok			= encodeString( key, keyString, err );
+		if ( !ok )	return false;
+
+		valueString	= undefined;
+		ok			= encodeJSON( value, valueString, err );
+		if ( !ok )
+		{
+			err = "Invalid value '" + value.toString() + "' in structure element: " + element.toString();
+			return false;
+		}
+		
+		if ( result.size() > 2 )
+		{
+			result	= result + " , ";
+		}
+		result		= result + keyString + " : " + valueString;
+		
+	}
+	result	= result + " }";
+	return true;
+}
+
+function encodeArray( element, byref result, byref err )
+{
+	result	= "[ ";
+	forall value in element
+	{
+		valueString	= undefined;
+		ok			= encodeJSON( value, valueString, err );
+		if ( !ok )
+		{
+			err	= "Invalid value '" + value.toString() + "' in array element: " + element.toString();
+			return false;
+		}
+		
+		if ( result.size() > 2 )
+		{
+			result	= result + " , ";
+		}
+		result		= result + valueString;
+		
+	}
+	result	= result + " ]";
+	return true;
+}
+
+function encodeString( element, byref result, byref err )
+{
+	result	= "\"";
+	
+	forall ch in element
+	{
+		if ( ch == "\"" )
+		{
+			result = result + "\\\"";
+		}
+		else if ( ch == "\\" )
+		{
+			result = result + "\\\\";
+		}
+		else if ( ch == "/" )
+		{
+			result = result + "\\/";
+		}
+//		else if ( ch == "\b" )
+//		{
+//			result = result + "\\b";
+//		}
+//		else if ( ch == "\f" )
+//		{
+//			result = result + "\\f";
+//		}
+		else if ( ch == "\n" )
+		{
+			result = result + "\\n";
+		}
+		else if ( ch == "\r" )
+		{
+			result = result + "\\r";
+		}
+		else if ( ch == "\t" )
+		{
+			result = result + "\\t";
+		}
+		else if ( nonASCII( ch ) )
+		{
+			// TO DO
+		} 
+		else
+		{
+			result	= result + ch;
+		}
+	}
+	result	= result + "\"";
+	return true;
+}
+
+function encodeNumber( element, byref result, byref err )
+{
+	result	= element.toString();
+	return true;
+}
+
+function encodeMoney( element, byref result, byref err )
+{
+	_value = Structure("amount", element.amount, "currency", element.currency);
+	return encodeObject( _value, result, err );
+}
+
+function encodeBoolean( element, byref result, byref err )
+{
+	result	= element.toString();
+	return true;
+}
+
+function encodeUndefined( element, byref result, byref err )
+{
+	result	= "null";
+	return true;
+}
+
+function encodeDate( element, byref result, byref err )
+{
+	if ( element.toString().size() < 10 )
+	{
+		result = "null";
+		return true;	
+	}
+	
+	day			= element.day;
+	month		= element.month;
+	year		= element.year;
+	day			= ( day < 10 ? "0" : "" ) + day;
+	month		= ( month < 10 ? "0" : "" ) + month;
+	return encodeString( year + "-" + month + "-" + day, result, err );
+}
+
+function encodeEnum( element, byref result, byref err )
+{
+	enumValues	= Component.reflect:enumValues( element.type() );
+	if ( enumValues != undefined )
+	{
+		_value		= Component.reflect:findEnumValue( element, enumValues );
+		_element	= Structure( "name", element.toString(), "value", _value );
+		return encodeObject( _element, result, err );
+	}
+	return false;
+}
+
+function encodePair( element, byref result, byref err )
+{
+	if ( element.first == "jsonstring" )
+	{
+		result	= "\"" + element.second + "\"";
+		return true;
+	}
+	else
+	{
+		_element	= Structure( "first", element.first, "second", element.second );
+		return encodeObject( _element, result, err );
+	}
+}
+
+function encodeObjectRef( element, byref result, byref err )
+{
+	if ( element.isValid() )
+	{
+		return encodeString( element.id().toString(), result, err );
+	}
+	else
+	{
+		result = "null";
+		return true;
+	}
+}
+
+function encodeGUID( element, byref result, byref err )
+{
+	return encodeString( element.toString(), result, err );
+}
+
+function encodeTime( element, byref result, byref err )
+{
+	_value = Structure("amount", element.amount, "unit", element.unit);
+	return encodeObject( _value, result, err );
+}
+
+function decodeJSON( text, byref value, logFile, byref err )
+{
+	node		= parseJson( text );
+	if ( node == undefined )
+	{
+    	err	= "Unknown JSON parse error";
+    	writeToDebugLog( err );
+    	return false;
+	}	
+    else if ( node.contains( "error" ) ) 
+    {
+    	err = "JSON parse error line " + node.line.toString() + ", col " + node.valueFor("column").toString() + ": " + node.valueFor("error") + " " + node.expect.toString()
+    			+ "\n\r\n\r" + text + "\n\r";
+   		writeToDebugLog( err );
+        return false;
+    }
+	else if ( !node.isStructure() && !node.isString() ) 
+	{
+    	err	= "Unknown JSON parse error";
+		writeToDebugLog( err );
+    	return false;
+	}
+   
+ 	return getJSONValue( node, value, err );
+}
+
+function nonASCII( ch )
+{
+	return false;
+}
+
+function parseJson( jsonString ) {
+    grammar =
+       "root : value  eof .\n" +
+       "value : string | number | object | array | true | false | null .\n" +
+       "string : \"\\\"\" ( \\nows ('\\\\' \\nows '\\\\','\\\"','/','b','f','n','r,'t','u' | character) ) SEQ OPT \"\\\"\" [+string] .\n" +
+       "character : ' '..'!', '#'..'[', ']'..'~', '\\u0080'..'\\uFFFF' .\n" +
+       "number : '-' OPT (\\nows '0'..'9') SEQ (\\nows '.' (\\nows '0'..'9') SEQ) OPT\n" +
+       "              (('e' | 'E') ('+' | '-') OPT (\\nows '0'..'9') SEQ) OPT [+number] .\n" +
+       "object : \"{\" ( member LIST ) OPT \"}\" [object] .\n" +
+       "member : string \":\" value [member] .\n" +
+       "array : \"[\" ( value LIST ) OPT \"]\" [array] .\n" +
+       "true : \"true\" [true] .\n" +
+       "false : \"false\" [false] .\n" +
+       "null : \"null\" [null] .\n";
+       
+    utils = InternalObject( "client" ).utils();
+    return utils.parse( grammar, jsonString );         
+}
+
+function getJSONObject( objectNode, byref value, byref err )
+{
+	if ( objectNode.contains( "type" ) && objectNode.type == "object" )
+	{
+		if ( objectNode.contains( "children" ) && objectNode.children.size() == 1 )
+		{
+			listNode	= objectNode.children[1];
+			if ( listNode == undefined )
+			{
+				// Empty structure
+				value	= Structure();
+				return true;
+			}
+			else if ( listNode.contains( "type" ) && listNode.type == "list" )
+			{
+				s			= Structure();
+				memberNodes	= listNode.children;
+				forall memberNode in memberNodes
+				{
+					if ( memberNode.contains( "type" ) && memberNode.type == "member" )
+					{
+						children		= memberNode.children;
+						keyNode			= children[1];
+						valueNode		= children[2];
+						if ( keyNode.contains( "type" ) && keyNode.type == "string" )
+						{
+							k			= keyNode.children[1].value;
+							v			= undefined;
+							ok			= getJSONValue( valueNode, v, err );
+							if ( !ok ) return false;
+
+							s.add( k, v );
+						}
+					}
+				}
+				value	= s;
+				return true;
+			}
+		}
+		else if ( !objectNode.contains( "children" ) || objectNode.children.empty() )
+		{
+			// Empty structure
+			value	= Structure();
+			return true;
+		}
+	}
+	err	= "Cannot get object from json structure";
+	return false;
+}
+
+function getJSONArray( arrayNode, byref value, byref err )
+{
+	if ( arrayNode.contains( "type" ) && arrayNode.type == "array" )
+	{
+		if ( arrayNode.contains( "children" ) && arrayNode.children.size() == 1 )
+		{
+			listNode	= arrayNode.children[1];
+			if ( listNode == undefined )
+			{
+				// Empty list
+				value	= List();
+				return true;
+			}
+			else if ( listNode.contains( "type" ) && listNode.type == "list" )
+			{
+				l			= List();
+				listNodes	= listNode.children;
+				forall listNode in listNodes
+				{
+					v		= undefined;
+					ok		= getJSONValue( listNode, v, err );
+					if ( !ok ) return false;
+					
+					l.add( v );
+				}
+				value		= l;
+				return true;
+			}
+		}
+		else if ( !arrayNode.contains( "children" ) || arrayNode.children.empty() )
+		{
+			// Empty list
+			value	= List();
+			return true;
+		}
+	}
+	err	= "Cannot retrieve array values";
+	return false;
+}
+
+function getJSONString( stringNode, byref value, byref err )
+{
+	if ( stringNode.contains( "type" ) && stringNode.type == "string" )
+	{
+		value	= stringNode.children[1].value;
+		return true;
+	}
+	err	= "Cannot get string from json structure";
+	return false;
+}
+
+
+function getJSONNumber( numberNode, byref value, byref err )
+{
+	if ( numberNode.contains( "type" ) && numberNode.type == "number" )
+	{
+		number	= numberNode.children[1].value;
+		if ( number.isNumber() )
+		{
+			value	= number.toNumber();
+			return true;
+		}
+	}
+	err	= "Cannot get number from json structure";
+	return false;
+}
+
+function getJSONValue( node, byref value, byref err )
+{
+	if ( node.contains( "type" ) )
+	{
+		if ( node.type == "object" )
+		{
+			return getJSONObject( node, value, err );
+		}
+		else if ( node.type == "array" )
+		{
+			return getJSONArray( node, value, err );
+		}
+		else if ( node.type == "string" )
+		{
+			return  getJSONString( node, value, err );
+		}		
+		else if ( node.type == "number" )
+		{
+			return getJSONNumber( node, value, err );
+		}
+		else if ( node.type == "true" )
+		{
+			value	= true;
+			return true;
+		}
+		else if ( node.type == "false" )
+		{
+			value	= false;
+			return true;
+		}
+		else if ( node.type == "null" )
+		{
+			value	= undefined;
+			return true;
+		}
+		else
+		{
+			err	= "Unrecognized type " + node.type;
+			return false;
+		}		
+	}
+	else if ( node.contains( "value" ) )
+	{
+		value	= node.value;
+		return true;
+	}
+	
+	err	= "Cannot get value from json structure";
+	return false;
+}
+
+////////////////////////////////////////////////////////
+// LOGGING
+////////////////////////////////////////////////////////
+
+function debugLogTag()
+{
+	return "__CONNECT debug log file__";
+}
+
+function writeToDebugLog( text )
+{
+	logFile		= getDebugLogFile();
+	if ( logFile != undefined )
+	{
+		session "continue on external error" true;
+		logFile.WriteLine( text );
+		session "continue on external error" false;
+	}
+}
+
+function getDebugLogFile()
+{
+	logFile		= modelpackage.getTaggedValue( debugLogTag() );
+	if ( logFile != undefined )
+	{
+		return logFile;
+	}
+	else
+	{
+		fso = ExternalObject( "Scripting.FileSystemObject" );
+		if ( fso.isUndefined() ) 
+		{
+			error "Cannot create FileSystemObject object.";
+			stop;
+		}
+	
+		WindowsFolder	= 0;
+		SystemFolder	= 1;
+		TemporaryFolder	= 2;
+		tempFileName 	= fso.GetSpecialFolder(TemporaryFolder).Path() + "\\" + fso.GetTempName();
+		tempLogFileName	= tempFileName + ".log";
+		
+		msoTrue 		= -1;
+		msoFalse 		= 0;
+		
+		forReading = 1;
+		forWriting = 2;
+		forAppending = 8;
+		
+		tristateUseDefault = -2;
+		tristateTrue = -1;
+		tristateFalse = 0;
+		
+		create 			= msoTrue;
+		tempLogFile 	= fso.OpenTextFile( tempLogFileName, forWriting, create, tristateUseDefault );
+		if ( tempLogFile != undefined )
+		{
+			message "HTTP debug log file created: " + tempLogFileName;
+			modelpackage.setTaggedValue( debugLogTag(), tempLogFile );
+			return tempLogFile;
+		}
+		else
+		{
+			return undefined;
+		}
+	}
+}
+
+function writeToLog( file, line )
+{
+	if ( file != undefined )
+	{
+		session "continue on external error" true;
+		file.clearError();
+		file.WriteLine( line );
+		session "continue on external error" false;
+		if ( file.hasError() )
+		{
+			message( "Cannot write to log" );
+		}
+	}
+}
+
+////////////////////////////////////////////////////////
+// MAIN
+////////////////////////////////////////////////////////
+scope = modelpackage;
+graphName = "ValueSprints";
+toGraph(scope, graphName); 
+
