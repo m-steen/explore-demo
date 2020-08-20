@@ -33,6 +33,8 @@ export class MObject implements IObject {
   @serializable
   @observable layer: string = '';
   // @computed get name(): string { return Object.keys(this.properties).includes('nm') ? (this.properties['nm'].value as string) : this.id; };
+  @observable parent: MObject | null = null;
+  @observable children: MObject[] = [];
 
   constructor(type: string, name?: string, id?: string) {
     this.id = id ? id : uuid();

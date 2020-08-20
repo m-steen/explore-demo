@@ -29,10 +29,10 @@ class DiagramNode extends React.Component<DiagramNodeProps> {
   handleClick = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
     const { node } = this.props;
     if (!e.shiftKey) {
-      node.getView().getEditor().clearSelection();
-      node.getView().getEditor().selectElement(node);
+      node.view.getEditor().clearSelection();
+      node.view.getEditor().selectElement(node);
     } else {
-      node.getView().getEditor().toggleSelection(node);
+      node.view.getEditor().toggleSelection(node);
     }
     e.stopPropagation();
   }
@@ -40,7 +40,7 @@ class DiagramNode extends React.Component<DiagramNodeProps> {
   handleContextMenu = (e: React.MouseEvent<SVGAElement, MouseEvent>) => {
     e.preventDefault();
     const { node } = this.props;
-    const view = node.getView();
+    const view = node.view;
     const editor = view.getEditor();
     if (node.isSelected) {
       view.layout.stop();
@@ -64,8 +64,8 @@ class DiagramNode extends React.Component<DiagramNodeProps> {
   handleDrag: DraggableEventHandler = (e, data) => {
     const { node } = this.props;
     transaction(() => {
-      node.x += data.deltaX / (node.getView().zoomFactor || 1);
-      node.y += data.deltaY / (node.getView().zoomFactor || 1);
+      node.x += data.deltaX / (node.view.zoomFactor || 1);
+      node.y += data.deltaY / (node.view.zoomFactor || 1);
     })
     e.stopPropagation();
   }
@@ -73,7 +73,7 @@ class DiagramNode extends React.Component<DiagramNodeProps> {
 
 const GraphicShape: React.FC<{ node: ViewNode }> = observer((props) => {
   const { node } = props;
-  const fillColor = node.getView().nodeColor(node);
+  const fillColor = node.view.nodeColor(node);
   const strokeColor = node.isPrimarySelection ? 'chartreuse' : node.isSelected ? 'blue' : 'grey';
   const style: React.CSSProperties = { stroke: strokeColor, strokeWidth: 2, fill: fillColor };
   if (node.shape) {

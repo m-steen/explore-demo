@@ -29,11 +29,11 @@ class DiagramLink extends React.Component<GraphicLinkProps> {
     const { edge } = this.props;
     if (!e.shiftKey) {
       transaction(() => {
-        edge.getView().getEditor().clearSelection();
-        edge.getView().getEditor().selectElement(edge);
+        edge.view.getEditor().clearSelection();
+        edge.view.getEditor().selectElement(edge);
         });
     } else {
-      edge.getView().getEditor().toggleSelection(edge);
+      edge.view.getEditor().toggleSelection(edge);
     }
     e.stopPropagation();
   }

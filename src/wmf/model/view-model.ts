@@ -24,32 +24,28 @@ export class ViewNode extends MObject {
   @computed get label(): string { return this.name; };
 
   @computed get isPrimarySelection() {
-    const selection = this.getView().getEditor().selection;
+    const selection = this.view.getEditor().selection;
     return selection.length > 0 && selection[0] === this.id;
   }
 
   @computed get isSelected() {
-    return this.getView().getEditor().selection.includes(this.id);
+    return this.view.getEditor().selection.includes(this.id);
   }
 
-  constructor(public parent: ViewModel, type: string, name?: string, id?: string) {
+  constructor(readonly view: ViewModel, type: string, name?: string, id?: string) {
     super(type, name, id);
     this.shape = this.type;
   }
 
   delete = () => {
-    if (this.parent.nodes.includes(this)) {
-      this.parent.edges.filter((edge) => edge.source === this || edge.target === this)
+    if (this.view.nodes.includes(this)) {
+      this.view.edges.filter((edge) => edge.source === this || edge.target === this)
         .forEach((edge) => edge.delete());
       if (this.isSelected) {
-        this.parent.getEditor().toggleSelection(this);
+        this.view.getEditor().toggleSelection(this);
       }
-      this.parent.nodes.splice(this.parent.nodes.indexOf(this), 1);
+      this.view.nodes.splice(this.view.nodes.indexOf(this), 1);
     }
-  }
-
-  getView(): ViewModel {
-    return this.parent;
   }
 
   @action
@@ -76,26 +72,26 @@ export class ViewEdge extends ViewNode {
   @computed get label(): string { return this.name; };
 
   @computed get isPrimarySelection() {
-    const selection = this.getView().getEditor().selection;
+    const selection = this.view.getEditor().selection;
     return selection.length > 0 && selection[0] === this.id;
   }
 
   @computed get isSelected() {
-    return this.getView().getEditor().selection.includes(this.id);
+    return this.view.getEditor().selection.includes(this.id);
   }
 
-  constructor(parent: ViewModel, type: string, source: ViewNode, target: ViewNode, name?: string, id?: string) {
-    super(parent, type, name, id);
+  constructor(readonly view: ViewModel, type: string, source: ViewNode, target: ViewNode, name?: string, id?: string) {
+    super(view, type, name, id);
     this.source = source;
     this.target = target;
   }
 
   delete = () => {
-    if (this.parent.edges.includes(this)) {
+    if (this.view.edges.includes(this)) {
       if (this.isSelected) {
-        this.parent.getEditor().toggleSelection(this);
+        this.view.getEditor().toggleSelection(this);
       }
-      this.parent.edges.splice(this.parent.edges.indexOf(this), 1);
+      this.view.edges.splice(this.view.edges.indexOf(this), 1);
     }
   }
 }
@@ -261,8 +257,8 @@ export class ViewModel extends MModel {
 
 export class DummyNode extends ViewNode {
 
-  constructor(parent: ViewModel, edge: ViewEdge) {
-    super(parent, edge.type, edge.name, edge.id);
+  constructor(readonly view: ViewModel, edge: ViewEdge) {
+    super(view, edge.type, edge.name, edge.id);
     this.shape = 'circle';
     this.setSize(20, 20);
   }
@@ -270,8 +266,8 @@ export class DummyNode extends ViewNode {
 
 export class EdgeSegment extends ViewEdge {
 
-  constructor(parent: ViewModel, protected edge: MRelation, source: ViewNode, target: ViewNode) {
-    super(parent, edge.type, source, target, edge.name, edge.id);
+  constructor(readonly view: ViewModel, protected edge: MRelation, source: ViewNode, target: ViewNode) {
+    super(view, edge.type, source, target, edge.name, edge.id);
     this.name = '';
   }
 }
