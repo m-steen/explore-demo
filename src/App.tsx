@@ -16,6 +16,7 @@ import { ViewNode } from './wmf/model/view-model';
 import { Login } from './components/Login';
 import { SelectForm } from './components/SelectForm';
 import { MObject } from './wmf/model/model';
+import { TreeView } from './wmf/components/tree-view/TreeView';
 
 @observer
 class App extends React.Component {
@@ -73,6 +74,9 @@ class App extends React.Component {
               </Tab>
               <Tab eventKey="table" title="Table">
                 <ObjectTable model={view} editor={this.editor} onExploreObject={this.onExploreObject} />
+              </Tab>
+              <Tab eventKey="tree" title="Tree">
+                <TreeView model={view} />
               </Tab>
             </Tabs>
           </Col>
