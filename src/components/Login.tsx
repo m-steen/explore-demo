@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { observer } from 'mobx-react';
-import Editor from '../wmf/editor/editor';
 import Select, { ValueType } from 'react-select';
 import { Modal } from 'react-bootstrap';
 import { Repository } from '../wmf/repository/repository';
+import Application from '../model/application';
+import { MModel } from '../wmf/model/model';
 
-export const Login: React.FC<{ editor: Editor }> = observer((props) => {
+export const Login: React.FC<{ editor: Application }> = observer((props) => {
 
   const initList: string[] = [];
   const [databases, setDatabases] = useState(initList);
@@ -27,7 +28,7 @@ export const Login: React.FC<{ editor: Editor }> = observer((props) => {
       }
     }
   
-      function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    function handleLogin(event: React.FormEvent<HTMLFormElement>) {
       repository.login(username, password)
         .then(() => setDatabases(repository.listDatabases()))
         .catch((err) => console.log(err))
@@ -70,15 +71,16 @@ export const Login: React.FC<{ editor: Editor }> = observer((props) => {
     )
   }
 
-  const SelectDatabaseModal: React.FC<{ repository: Repository }> = observer((props) => {
+  const SelectDatabaseModal: React.FC<{ repository: Repository, onSelected: () => void }> = observer((props) => {
     const options = databases.map((db) => ({ value: db, label: db }));
     const currentDatabase = props.repository.database;
     const currentSelection = currentDatabase ? { value: currentDatabase, label: currentDatabase } : undefined;
 
-    const handleDatabaseSelection = (selection: ValueType<{ value: string, label: string}>) => {
+    const handleDatabaseSelection = (selection: ValueType<{ value: string, label: string }>) => {
       if (selection) {
-        const selected = (selection as {value: string, label: string}).value;
+        const selected = (selection as { value: string, label: string }).value;
         repository.selectDatabase(selected);
+        props.onSelected();
       }
     }
 
@@ -98,10 +100,27 @@ export const Login: React.FC<{ editor: Editor }> = observer((props) => {
     )
   });
 
+  const onDatabaseSelected = () => {
+    const { editor } = props;
+    editor.repository.fetchObjects(editor.scopeModel, '', { ...editor.filter, types: ['MM_ModelPackage'] })
+      .then(() => {
+        if (editor.scopeModel.objects.length === 0) {
+          return editor.repository.fetchObjects(editor.scopeModel, '', { ...editor.filter, types: ['ArchiMateMM_Model'] })
+            .then(() => editor.scopeModel)
+        } else {
+          return editor.scopeModel;
+        }
+      })
+      .then((scopeModel: MModel) => {
+        editor.scope = scopeModel.objects.map((obj) => obj.id);
+        console.log('Initial scope: ', editor.scope);
+      })
+  }
+
   return (
     <>
       <LoginModal />
-      <SelectDatabaseModal repository={repository} />
+      <SelectDatabaseModal repository={repository} onSelected={onDatabaseSelected} />
     </>
   )
 });
