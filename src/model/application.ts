@@ -3,7 +3,7 @@ import { Menu, MenuOption } from '../wmf/editor/menu';
 import { Command } from '../wmf/components/CommandButton';
 import Editor from '../wmf/editor/editor';
 import ArangoRepository from '../wmf/repository/arango-repository';
-import { ViewNode } from '../wmf/model/view-model';
+import { ViewNode, ViewModel } from '../wmf/model/view-model';
 
 const colorScheme: Map<string, string> = new Map([
   ['Strategy', '#FFC685'],
@@ -127,6 +127,9 @@ class Application extends Editor {
     this.query = '';
     this.filter =  { layers: [], types: [], relations: [], outgoing: true, incoming: false };
   }
+
+  @observable scopeModel = new ViewModel(this);
+  @observable scope: string[] = [];
 
   constructor(title: string = '') {
     super(new ArangoRepository());

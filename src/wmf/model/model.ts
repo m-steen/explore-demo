@@ -148,7 +148,7 @@ export class MModel {
   @serializable(list(object(MRelation)))
   @observable.shallow relations: MRelation[] = [];
 
-  constructor(protected editor: Editor) {}
+  constructor(readonly editor: Editor) {}
 
   @action
   addObject(type: string, name?: string, id?: string): MObject {

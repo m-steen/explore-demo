@@ -1,5 +1,5 @@
 import { Filter } from "../../model/application";
-import { MModel } from "../model/model";
+import { MModel, MObject } from "../model/model";
 import { ViewNode } from "../model/view-model";
 
 export interface User {
@@ -25,6 +25,8 @@ export interface Repository {
   loadModel(model: MModel): Promise<void>;
 
   fetchObjects(model: MModel, query: string, filter: Filter): Promise<void>;
+
+  fetchChildren(model: MModel, object: MObject): Promise<void>;
 
   getRelationsFrom(node: ViewNode, filter: Filter, model: MModel): Promise<void>;
 

@@ -1,7 +1,7 @@
 import { transaction, observable } from 'mobx';
 import { Database, aql } from 'arangojs';
 import { Filter } from '../../model/application';
-import { IObject, IDocument, IRelation } from '../model/model';
+import { IObject, IDocument, IRelation, MModel, MObject } from '../model/model';
 import { Repository, User } from './repository';
 import { ViewModel, ViewNode } from '../model/view-model';
 
@@ -116,17 +116,51 @@ class ArangoRepository implements Repository {
                 return Object.keys(removeMetaData(doc)).forEach((name) => node?.setProperty(name, doc[name]))
               });
               console.log(object.name, parents, children.map((c) => c.id))
-              if (parents.length > 0) {
+              if (parents.length > 0 && parents[0]) {
                 node.parentID = parents[0].id;
               }
               if (children) {
                 node.children = children.map((child) => child.id);
               }
-              view.getEditor().selectElement(node);
+              view.editor.selectElement(node);
             }
           })
         })
       });
+  }
+
+  fetchChildren(model: MModel, object: MObject) {
+
+    if (object.children.length > 0 && object.children.every((childID) => model.objects.some((obj) => childID === obj.id))) {
+      return new Promise<void>((resolve) => resolve());
+    }
+
+    const aquery = aql`
+      FOR child IN 1..1 INBOUND ${'Objects/' + object.id}
+      GRAPH "nestingGraph"
+      RETURN child
+    `;
+
+    return this.db.query(aquery)
+      .then((array) => {
+        transaction(() => {
+          array.each((child: IObject) => {
+            let node = model.objects.find((x) => child.id === x.id);
+            if (node === undefined) {
+              if (model instanceof ViewModel) {
+                node = model.addNode(child.type, child.name, child.id);
+              } else {
+                node = model.addObject(child.type, child.name, child.id);
+              }
+              node.layer = child.layer;
+              node.parentID = object.id;
+              if (!object.children.includes(child.id)) {
+                object.children.push(child.id);
+              }
+            }
+          })
+        })
+      })
   }
 
   getRelationsFrom: (node: ViewNode, filter: Filter, view: ViewModel) => Promise<void> =

@@ -17,6 +17,7 @@ import { Login } from './components/Login';
 import { SelectForm } from './components/SelectForm';
 import { MObject } from './wmf/model/model';
 import { TreeView } from './wmf/components/tree-view/TreeView';
+import { ScopeSelection } from './components/ScopeSelection';
 
 @observer
 class App extends React.Component {
@@ -45,7 +46,10 @@ class App extends React.Component {
         </Row>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
           <Col md={4} style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
-            <Tabs defaultActiveKey="search" id="uncontrolled-task-tabs" mountOnEnter unmountOnExit>
+              <Tabs defaultActiveKey="scope" id="uncontrolled-task-tabs" mountOnEnter unmountOnExit>
+                <Tab eventKey="scope" title="Scope">
+                  <ScopeSelection model={this.editor.scopeModel} scope={this.editor.scope} />
+                </Tab>
               <Tab eventKey="search" title="Search">
                 <SearchForm appState={this.editor} onSubmit={this.onQuerySubmit} onClear={this.onClear} />
               </Tab>
