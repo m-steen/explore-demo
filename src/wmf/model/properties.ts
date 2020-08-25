@@ -119,7 +119,8 @@ class Property implements IProperty {
   }
 
   static isMoney(value: ValueType): value is Money {
-    return this.isStructure(value) && ['currency', 'amount'] === Object.keys(value)
+    const keys = this.isStructure(value) ? Object.keys(value) : [];
+    return keys.includes('currency') && keys.includes('amount')
   }
 }
 
