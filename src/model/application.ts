@@ -135,6 +135,21 @@ class Application extends Editor {
     super(new ArangoRepository());
     this.title = title;
     this.repository.setUrl('https://big.bizzdesign.io:8530');
+    this.repository.login('demo', 'BiZZdesignInnovationgroup2020')
+      .then((result) => {
+        if (result === 'success') {
+          if (this.repository.selectDatabase('demo')) {
+            console.log('Database selected')
+            this.repository.fetchObjects(this.scopeModel, '', { ...this.filter, types: ['MM_ModelPackage'] })
+              .then(() => {
+                this.scope = this.scopeModel.objects.map((obj) => obj.id);
+                console.log('Initial scope: ', this.scope);
+              })
+          } else {
+            console.log('Failed to select database')
+          }
+        }
+      });
 
     this.view.nodeColor = (node: ViewNode) => {
       const color = colorScheme.get(node.layer);
