@@ -44,7 +44,7 @@ function toGraph(scope, graphName)
 						relationTypeDocs.add(relationTypeToDoc(typeInfo));
 						relationTypeNames.add(typeName);
 					}
-					relationDocs.add(relationToDoc(object, metaModel, typeName, domain, typeName2Attrs, typeName2Metrics));
+					relationDocs.add(relationToDoc(object, metaModel, typeName, domain, graphName, typeName2Attrs, typeName2Metrics));
 				}
 				else
 				{
@@ -265,6 +265,7 @@ function relationToDoc(object,
 					   metaModel,
 					   typeName,
 					   domain,
+					   graphName,
 					   byref typeName2Attrs, 
 					   byref typeName2Metrics)
 {
@@ -482,7 +483,7 @@ function getTypeInfo(object)
 	if ( !metaModel.definesConcept(conceptName) )
 	{
 		error "Concept not found for object: " + object;
-		return List();
+		return Structure();
 	}
 	concept = metaModel.concept(conceptName);
 	
@@ -880,13 +881,16 @@ function dropCollection(collection)
 
 function getServerURL()
 {
-	return "http://172.16.148.1:8529/";
-	//return "http://big.bizzdesign.io:8529/_db/ssa/";
-}
-
-function getSettings()
-{
-	return Structure();
+	url = getSettings().contains("url") ? getSettings().url : "http://localhost:8529/";
+	database = getSettings().contains("database") ? getSettings().database : "";
+	if (database.empty())
+	{
+		return url;
+	}
+	else
+	{
+		return format("%s_db/%s/", url, database);
+	}
 }
 
 function getHeaders()
@@ -898,7 +902,21 @@ function getHeaders()
 
 function getAuthentication()
 {
-	return Structure("type", "None");
+	settings = getSettings();
+	username = settings.contains("username") ? settings.username : "";
+	password = settings.contains("password") ? settings.password : "";
+	if (username.empty() && password.empty())
+	{
+		return Structure("type", "None");
+	}
+	else
+	{
+		return Structure(
+			"type", "Basic",
+			"username", username,
+			"password", password
+			);
+	}
 }
 
 function getHTTPObject(holder, byref xmlHttp)
@@ -921,7 +939,7 @@ function getHTTPObject(holder, byref xmlHttp)
 
 function request(method, url, body, bodyJSON, byref status, byref response, byref responseJSON)
 {
-	httpObject = undefined;
+	httpObject = ExternalObject("MSXML2.XMLHTTP");
 	if ( !getHTTPObject(modelpackage, httpObject) ) 
 	{
 		return false;
@@ -993,12 +1011,12 @@ function request(method, url, body, bodyJSON, byref status, byref response, byre
 	session "continue on external error" false;
 	if ( httpObject.hasError() )
 	{
-		writeToDebugLog("ERROR: " + xmlHttp.getError());
+		writeToDebugLog("ERROR: " + httpObject.getError());
 		return false;
 	}
 	
-	statusCode = httpObject.status();
-	status = statusCode + " - " + httpObject.statusText();
+	statusCode = httpObject.status;
+	status = statusCode + " - " + httpObject.statusText;
 	
 	writeToDebugLog("Status: " + status);
 	
@@ -1007,7 +1025,7 @@ function request(method, url, body, bodyJSON, byref status, byref response, byre
 		return false;
 	}
 	
-	responseJSON = httpObject.responseText();
+	responseJSON = httpObject.responseText;
 	writeToDebugLog("Response (JSON): " + responseJSON);
 	
 	ok = true;
@@ -1547,7 +1565,7 @@ function getDebugLogFile()
 		WindowsFolder	= 0;
 		SystemFolder	= 1;
 		TemporaryFolder	= 2;
-		tempFileName 	= fso.GetSpecialFolder(TemporaryFolder).Path() + "\\" + fso.GetTempName();
+		tempFileName 	= fso.GetSpecialFolder(TemporaryFolder).Path + "\\" + fso.GetTempName();
 		tempLogFileName	= tempFileName + ".log";
 		
 		msoTrue 		= -1;
@@ -1594,7 +1612,22 @@ function writeToLog( file, line )
 ////////////////////////////////////////////////////////
 // MAIN
 ////////////////////////////////////////////////////////
-scope = modelpackage;
-graphName = "ValueSprints";
-toGraph(scope, graphName); 
+root = modelpackage;
+if (!selection.empty() && selection[1] is "MM_Model") {
+	root = selection[1];
+}
+
+function getSettings()
+{
+	return Structure(
+		"url", "http://localhost:8529/",
+		"database", "demo",
+		"username", "root",
+		"password", "",
+		"graphName", "ValueSprints"
+	);
+}
+
+graphName = getSettings().graphName;
+toGraph(root, graphName); 
 
