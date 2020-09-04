@@ -69,7 +69,7 @@ export const TreeNode: React.FC<TreeNodeProps> = observer((props) => {
       type='checkbox'
       inline
       checked={isSelected}
-      label={object.name}
+      label={object._name}
       onClick={(e: React.MouseEvent) => {
         e.stopPropagation();
       }}
@@ -78,7 +78,7 @@ export const TreeNode: React.FC<TreeNodeProps> = observer((props) => {
         e.stopPropagation();
       }}
     />
-    : <span>{object.name}</span>
+    : <span>{object._name}</span>
 
   return (
     <ListGroup.Item>

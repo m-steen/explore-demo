@@ -1,5 +1,5 @@
 import { observable, action, transaction } from 'mobx';
-import { IObject } from '../model/model';
+import { MObject } from '../model/model';
 import { ViewModel } from '../model/view-model';
 import { Repository } from '../repository/repository';
 import Ticker from './ticker';
@@ -38,11 +38,11 @@ class Editor {
   }
 
   @action
-  selectElement = (element: IObject) => {
+  selectElement = (element: MObject) => {
     this.selection.push(element.id);
   }
 
-  toggleSelection = (element: IObject) => {
+  toggleSelection = (element: MObject) => {
     if (this.selection.includes(element.id)) {
       this.selection.splice(this.selection.indexOf(element.id), 1);
     } else {

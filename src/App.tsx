@@ -46,7 +46,7 @@ class App extends React.Component {
         </Row>
         <Row style={{ marginTop: 5, marginBottom: 5 }}>
           <Col md={4} style={{ borderColor: 'lightgray', borderWidth: 'thin', borderStyle: 'solid' }}>
-              <Tabs defaultActiveKey="scope" id="uncontrolled-task-tabs" mountOnEnter unmountOnExit>
+              <Tabs defaultActiveKey="search" id="uncontrolled-task-tabs" mountOnEnter unmountOnExit>
                 <Tab eventKey="scope" title="Scope">
                   <ScopeSelection model={this.editor.scopeModel} scope={this.editor.scope} />
                 </Tab>
@@ -161,15 +161,15 @@ class App extends React.Component {
       view.nodes.forEach((node) => {
         let match;
         if (query.length > 0) {
-          const queryMatch = node.name.toLowerCase().includes(query.toLowerCase());
+          const queryMatch = node._name.toLowerCase().includes(query.toLowerCase());
           match = match ? match && queryMatch : queryMatch;
         }
         if (filter.layers.length > 0) {
-          const layerMatch = filter.layers.includes(node.layer);
+          const layerMatch = filter.layers.includes(node._domain);
           match = match ? match && layerMatch : layerMatch;
         }
         if (filter.types.length > 0) {
-          const typeMatch = filter.types.includes(node.type);
+          const typeMatch = filter.types.includes(node._type);
           match = match ? match && typeMatch : typeMatch;
         }
         if (match) {

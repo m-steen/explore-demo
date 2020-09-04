@@ -4,52 +4,64 @@ import uuid from 'uuid';
 import Editor from '../editor/editor';
 import { serializable, list, object, identifier, map } from 'serializr';
 
-export interface IObject {
-  id: string;
-  type: string;
-  layer: string;
-  name: string;
-  properties: { [name: string]: IProperty }
-}
 
-export interface IRelation extends IObject {
-  source: string;
-  target: string;
-}
+export type IObject = 
+  IDocument & {
+    _key?: string;
+    _id?: string;
+    id: string;
+    _name: string;
+    _type: string;
+    _domain: string;
+    _metaModel?: string;
+    _kind?: string;
+    _isContainer: boolean;
+  }
+
+
+export type IRelation = 
+  IObject &
+  {
+    _from: string;
+    _to: string;
+  }
 
 export interface IDocument {
   [key: string]: IProperty
 }
 
-export class MObject implements IObject {
+export class MObject {
   @serializable(identifier())
   id: string;
   @serializable
-  @observable name: string;
+  @observable _name: string;
   @serializable(map(object(Property)))
   @observable properties: { [name: string]: Property } = {};
   @serializable
-  @observable type: string;
+  @observable _type: string;
   @serializable
-  @observable layer: string = '';
-  // @computed get name(): string { return Object.keys(this.properties).includes('nm') ? (this.properties['nm'].value as string) : this.id; };
+  @observable _domain: string = '';
+
+  _isContainer: boolean = false;
   @observable parentID: string | null = null;
   @observable children: string[] = [];
 
   constructor(type: string, name?: string, id?: string) {
     this.id = id ? id : uuid();
-    this.type = type;
+    this._type = type;
     if (name) {
-      this.name = name;
+      this._name = name;
     } else {
-      this.name = type;
+      this._name = type;
     }
 
     const nameProperty: IProperty = {
       name: 'nm',
       label: 'name',
       type: 'string',
-      value: this.name
+      category: 'string',
+      value: this._name,
+      rawValue: this._name,
     }
     this.setProperty('nm', nameProperty);
   }
@@ -72,7 +84,7 @@ export class MObject implements IObject {
 
   @action
   setProperty(name: string, property: IProperty) {
-    this.properties[name] = new Property(property.name, property.label, property.type, property.value);
+    this.properties[name] = new Property(property.name, property.label, property.type, property.category, property.value, property.rawValue);
     return this;
   }
 

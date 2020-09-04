@@ -21,7 +21,7 @@ export class ViewNode extends MObject {
   @serializable
   @observable shape: string = '';
 
-  @computed get label(): string { return this.name; };
+  @computed get label(): string { return this._name; };
 
   @computed get isPrimarySelection() {
     const selection = this.view.getEditor().selection;
@@ -34,7 +34,7 @@ export class ViewNode extends MObject {
 
   constructor(readonly view: ViewModel, type: string, name?: string, id?: string) {
     super(type, name, id);
-    this.shape = this.type;
+    this.shape = this._type;
   }
 
   delete = () => {
@@ -69,7 +69,7 @@ export class ViewEdge extends ViewNode {
   @serializable(reference(ViewNode))
   target: ViewNode;
 
-  @computed get label(): string { return this.name; };
+  @computed get label(): string { return this._name; };
 
   @computed get isPrimarySelection() {
     const selection = this.view.getEditor().selection;
@@ -230,7 +230,7 @@ export class ViewModel extends MModel {
     const nodes = json.nodes;
     nodes.forEach((node: any) => {
       const newNode = newView.addNode(node.type, node.name, node.id);
-      [ newNode.x, newNode.y, newNode.width, newNode.height, newNode.layer, newNode.shape ] = [ node.x, node.y, node.width, node.height, node.layer, node.shape ];
+      [ newNode.x, newNode.y, newNode.width, newNode.height, newNode._domain, newNode.shape ] = [ node.x, node.y, node.width, node.height, node._domain, node.shape ];
       if (node.properties) {
         const properties: IProperty[] = Object.values(node.properties).filter((prop: any) => Property.isProperty(prop)).map((prop) => prop as IProperty);
         newNode.addProperties(properties);
@@ -258,7 +258,7 @@ export class ViewModel extends MModel {
 export class DummyNode extends ViewNode {
 
   constructor(readonly view: ViewModel, edge: ViewEdge) {
-    super(view, edge.type, edge.name, edge.id);
+    super(view, edge._type, edge._name, edge.id);
     this.shape = 'circle';
     this.setSize(20, 20);
   }
@@ -267,7 +267,7 @@ export class DummyNode extends ViewNode {
 export class EdgeSegment extends ViewEdge {
 
   constructor(readonly view: ViewModel, protected edge: MRelation, source: ViewNode, target: ViewNode) {
-    super(view, edge.type, source, target, edge.name, edge.id);
-    this.name = '';
+    super(view, edge._type, source, target, edge._name, edge.id);
+    this._name = '';
   }
 }

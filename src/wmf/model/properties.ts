@@ -13,7 +13,9 @@ export interface IProperty {
   name: string;
   label: string;
   type: PropertyType;
+  category: string;
   value: ValueType;
+  rawValue: any;
 }
 
 function serializePropertyType(value: PropertyType): any {
@@ -85,14 +87,18 @@ class Property implements IProperty {
   label: string;
   @serializable(custom(serializePropertyType, deserializePropertyType))
   type: PropertyType;
+  category: string;
   @serializable(custom(serializeValue, deserializeValue))
   value: ValueType;
+  rawValue: any;
 
-  constructor(name: string, label: string, type: PropertyType, value: ValueType) {
+  constructor(name: string, label: string, type: PropertyType, category: string, value: ValueType, rawValue: any) {
     this.name = name;
     this.label = label;
     this.type = type;
+    this.category = category;
     this.value = value;
+    this.rawValue = rawValue;
   }
 
   static isProperty(prop: Object): prop is IProperty {

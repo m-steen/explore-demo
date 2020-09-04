@@ -66,19 +66,25 @@ export const PropertySheet: React.FC<PropertySheetProps> = observer((props) => {
       name: 'id',
       label: 'ID',
       type: 'string',
+      category: 'string',
       value: selectedObjects[0].id,
+      rawValue: selectedObjects[0].id,
     },
     {
       name: 'nm',
       label: 'Name',
       type: 'string',
-      value: selectedObjects[0].name,
+      category: 'string',
+      value: selectedObjects[0]._name,
+      rawValue: selectedObjects[0]._name,
     },
     {
       name: 'type',
       label: 'Type',
       type: 'string',
-      value: selectedObjects[0].type,
+      category: 'string',
+      value: selectedObjects[0]._type,
+      rawValue: selectedObjects[0]._type,
     },
   ]
   : [];

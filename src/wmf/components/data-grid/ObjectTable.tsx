@@ -10,7 +10,7 @@ import { observer } from 'mobx-react-lite';
 import { PropertyEditor } from '../PropertyEditor';
 import { MModel, MObject } from '../../model/model';
 import Editor from '../../editor/editor';
-import Property, { PropertyType, IProperty, Enum, ValueType, Money } from '../../model/properties';
+import Property, { IProperty, Enum, ValueType, PropertyType } from '../../model/properties';
 import { DummyNode, EdgeSegment } from '../../model/view-model';
 import { DropdownButton, Dropdown, ButtonGroup, Button } from 'react-bootstrap';
 import { createPortal } from 'react-dom';
@@ -105,11 +105,13 @@ function BooleanFilter<R, SR>(props: FilterRendererProps<R, string, SR>) {
 }
 
 
-function selectFilter(propType: PropertyType) {
-  switch (propType) {
+function selectFilter(category: string) {
+  switch (category) {
     case "boolean":
       return BooleanFilter;
     case "number":
+    case "integer":
+    case "real":
     case "money":
       return NumericFilter;
     case "date":
@@ -119,10 +121,10 @@ function selectFilter(propType: PropertyType) {
       return StringFilter;
 
     default:
-      if (Array.isArray(propType)) {
+      if (Array.isArray(category)) {
         return StringFilter;
       }
-      if (typeof(propType) === 'object') {
+      if (typeof(category) === 'object') {
         return StringFilter;
       }
       break;
@@ -133,11 +135,11 @@ const applyPropertyFilters = (row: MObject, filters: Filters) => {
   const filterKeys = Object.keys(filters);
   return (
     filterKeys.every((key) => {
-      if (key === 'type' || key === 'name') {
+      if (key === '_type' || key === '_name') {
         return row[key].length >= filters[key].length && row[key].toLowerCase().includes(filters[key].toLowerCase());
       }
       const prop = row.getProperty(key);
-      switch (prop?.type) {
+      switch (prop?.category) {
         case "boolean":
           return (
             filters[key] === 'all'
@@ -176,7 +178,7 @@ function createColumns(objects: MObject[]): Column<MObject, SummaryRow>[] {
       }
     },
     {
-      key: 'type',
+      key: '_type',
       name: 'Type',
       resizable: true,
       sortable: true,
@@ -266,7 +268,7 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
           resizable: true,
           sortable: true,
           formatter: PropertyFormatter,
-          filterRenderer: selectFilter(columnProp.type),
+          filterRenderer: selectFilter(columnProp.category),
         }
         const newColumns = [...columns];
         newColumns.push(newColumn);
@@ -299,7 +301,7 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
   }, [columns, elements, properties]);
 
   const filteredRows: readonly MObject[] = elements.filter((row) => (
-    (filters.name && filters.name.length > 0 ? row.name.toLowerCase().includes(filters.name.toLowerCase()) : true)
+    (filters.name && filters.name.length > 0 ? row._name.toLowerCase().includes(filters.name.toLowerCase()) : true)
     && applyPropertyFilters(row, filters)
   ));
 
@@ -312,13 +314,13 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
       case 'id':
         sortedRows = sortedRows.sort((a, b) => a[sortColumn].localeCompare(b[sortColumn]));
         break;
-      case 'type':
+      case '_type':
         sortedRows = sortedRows.sort((a, b) => a[sortColumn].localeCompare(b[sortColumn]));
         break;
       default:
         const prop = properties.find((prop) => sortColumn === prop.name);
         if (prop) {
-          switch (prop.type) {
+          switch (prop.category) {
             case "boolean":
               sortedRows = sortedRows.sort((a, b) => compareBooleans(a.getPropertyValue(sortColumn), b.getPropertyValue(sortColumn)));
               break;
@@ -350,12 +352,13 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
     const summaryRow: SummaryRow = { id: 'total_0', totalCount: filteredRows.length, 
       sum: (key: string) => filteredRows.reduce((_sum, obj) => {
         const prop = obj.getProperty(key);
-        if (prop && prop.type === "number") {
+        if (prop && ["number", "integer", "real"].includes(prop.category)) {
           _sum += prop.value as number;
         }
-        if (prop && prop.type === "money") {
-          _sum += (prop.value as Money).amount;
+        if (prop && prop.category === "money") {
+          _sum += prop.rawValue as number;
         }
+        console.log('calculated sum: ', _sum)
         return _sum;
       },
       0
@@ -386,17 +389,20 @@ const ObjectTable: React.FC<ObjectTableProps> = observer((props) => {
       resizable: true,
       sortable: true,
       formatter: PropertyFormatter,
-      filterRenderer: selectFilter(columnProp.type),
+      filterRenderer: selectFilter(columnProp.category),
       summaryFormatter: (props) => { 
         let sum: ValueType;
+        let type: PropertyType;
         const _sum = props.row.sum(props.column.key);
-        if (columnProp.type === "money") {
+        if (columnProp.category === "money") {
           sum = { currency: 'USD', amount: _sum };
+          type = "money";
         } else {
           sum = _sum;
+          type = "number";
         }
         if (_sum !== 0) {
-          return <PropertyEditor property={{name: 'sum', label: 'sum', type: columnProp.type, value: sum}} readOnly={true} />;
+          return <PropertyEditor property={{name: 'sum', label: 'sum', type: columnProp.type, category: type, value: sum, rawValue: sum}} readOnly={true} />;
         } else {
           return null;
         }

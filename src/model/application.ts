@@ -134,11 +134,11 @@ class Application extends Editor {
   constructor(title: string = '') {
     super(new ArangoRepository());
     this.title = title;
-    this.repository.setUrl('https://big.bizzdesign.io:8530');
-    this.repository.login('demo', 'BiZZdesignInnovationgroup2020')
+    // this.repository.setUrl('https://big.bizzdesign.io:8530');
+    this.repository.login('', '')
       .then((result) => {
         if (result === 'success') {
-          if (this.repository.selectDatabase('demo')) {
+          if (this.repository.selectDatabase('repo')) {
             console.log('Database selected')
             this.repository.fetchObjects(this.scopeModel, '', { ...this.filter, types: ['MM_ModelPackage'] })
               .then(() => {
@@ -152,7 +152,7 @@ class Application extends Editor {
       });
 
     this.view.nodeColor = (node: ViewNode) => {
-      const color = colorScheme.get(node.layer);
+      const color = colorScheme.get(node._domain);
       if (color === undefined) { return 'white'; }
       return color;
     }
@@ -172,9 +172,9 @@ class Application extends Editor {
       menu.options.push(exploreObject);
 
       const selectSimilarAction: Command = (node: ViewNode) => new Promise<void>((resolve) => {
-        const type = node.type;
+        const type = node._type;
         this.view.nodes.forEach((node) => {
-          if (type === node.type) {
+          if (type === node._type) {
             this.selectElement(node);
           }
         });

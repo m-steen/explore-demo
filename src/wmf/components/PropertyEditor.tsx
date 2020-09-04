@@ -13,10 +13,12 @@ const numberFormatter = new Intl.NumberFormat(navigator.language, {
 const dateFormatter = new Intl.DateTimeFormat(navigator.language);
 
 function stringifyPropValue(property: IProperty): string {
-  switch (property.type) {
+  switch (property.category) {
     case "boolean":
       return property.value as boolean ? '✔️' : '❌';
     case "number":
+    case "integer":
+    case "real":
       return numberFormatter.format(property.value as number);
     case "string":
       return property.value as string;
@@ -48,11 +50,15 @@ function stringifyPropValue(property: IProperty): string {
     }
     case "list":
     case "set": {
-      const elementType = property.type[0];
-      return (property.value as ValueType[]).map((val) => stringifyPropValue(new Property('element', 'element', elementType, val))).join(', ');
+      const elementType = "string";
+      return (property.value as ValueType[]).map((val) => stringifyPropValue(new Property('element', 'element', elementType, elementType.toString(), val, val))).join(', ');
     }
 
     default: {
+      if (property.type instanceof Array) {
+        const elementType = property.type[0];
+        return (property.value as ValueType[]).map((val) => stringifyPropValue(new Property('element', 'element', elementType, elementType.toString(), val, val))).join(', ');
+      }
       console.log('Unknown property type: ' + property.type, property)
       return property.value?.toString() || '';
     }
