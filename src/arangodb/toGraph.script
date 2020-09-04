@@ -159,59 +159,59 @@ function toGraph(scope, graphName)
 	}
 	
 	// Export metamodel
-	collections = List(	Structure("name", graphName+"_Types", "type", "document"), 
-						Structure("name", graphName+"_Inheritance", "type", "edge"), 
-						Structure("name", graphName+"_Profiles", "type", "document"), 
-						Structure("name", graphName+"_Properties", "type", "document"), 
-						Structure("name", graphName+"_Assignment", "type", "edge"), 
-						Structure("name", graphName+"_Containment", "type", "edge")
+	collections = List(	Structure("name", getCollectionName(graphName, "Types"), "type", "document"), 
+						Structure("name", getCollectionName(graphName, "Inheritance"), "type", "edge"), 
+						Structure("name", getCollectionName(graphName, "Profiles"), "type", "document"), 
+						Structure("name", getCollectionName(graphName, "Properties"), "type", "document"), 
+						Structure("name", getCollectionName(graphName, "Assignment"), "type", "edge"), 
+						Structure("name", getCollectionName(graphName, "Containment"), "type", "edge")
 						);		
 	ok = prepareCollections(collections);
 	if ( ok )
 	{
 		newTypeDocs = undefined;
-		addNewDocuments(objectTypeDocs/* + relationTypeDocs*/, graphName+"_Types", undefined, newTypeDocs);
+		addNewDocuments(objectTypeDocs/* + relationTypeDocs*/, getCollectionName(graphName, "Types"), undefined, newTypeDocs);
 
 		newExtendsDocs = undefined;
-		addNewDocuments(extendsDocs, graphName+"_Inheritance", undefined, newExtendsDocs);
+		addNewDocuments(extendsDocs, getCollectionName(graphName, "Inheritance"), undefined, newExtendsDocs);
 
 		newProfileDefDocs = undefined;
-		addNewDocuments(profileDefDocs, graphName+"_Profiles", undefined, newProfileDefDocs);
+		addNewDocuments(profileDefDocs, getCollectionName(graphName, "Profiles"), undefined, newProfileDefDocs);
 
 		newPropertyDefDocs = undefined;
-		addNewDocuments(propertyDefDocs, graphName+"_Properties", undefined, newPropertyDefDocs);
+		addNewDocuments(propertyDefDocs, getCollectionName(graphName, "Properties"), undefined, newPropertyDefDocs);
 
 		newAssignDocs = undefined;
-		addNewDocuments(assignDocs, graphName+"_Assignment", undefined, newAssignDocs);
+		addNewDocuments(assignDocs, getCollectionName(graphName, "Assignment"), undefined, newAssignDocs);
 
 		newContainDocs = undefined;
-		addNewDocuments(containDocs, graphName+"_Containment", undefined, newContainDocs);
+		addNewDocuments(containDocs, getCollectionName(graphName, "Containment"), undefined, newContainDocs);
 	}	
 	
 	// Export model
-	collections = List(	Structure("name", graphName+"_Objects", "type", "document"), 
-						Structure("name", graphName+"_Relations", "type", "edge"), 
-						Structure("name", graphName+"_ParentChild", "type", "edge"));
+	collections = List(	Structure("name", getCollectionName(graphName, "Objects"), "type", "document"), 
+						Structure("name", getCollectionName(graphName, "Relations"), "type", "edge"), 
+						Structure("name", getCollectionName(graphName, "ParentChild"), "type", "edge"));
 	ok = prepareCollections(collections);
 	if ( ok )
 	{
 		newObjectDocs = undefined;
-		addNewDocuments(objectDocs, graphName+"_Objects", undefined, newObjectDocs);
+		addNewDocuments(objectDocs, getCollectionName(graphName, "Objects"), undefined, newObjectDocs);
 		
 		newRelationDocs = undefined;
-		addNewDocuments(relationDocs, graphName+"_Relations", undefined, newRelationDocs);
+		addNewDocuments(relationDocs, getCollectionName(graphName, "Relations"), undefined, newRelationDocs);
 		
 		newParentChildDocs = undefined;
-		addNewDocuments(parentChildDocs, graphName+"_ParentChild", undefined, newParentChildDocs);
+		addNewDocuments(parentChildDocs, getCollectionName(graphName, "ParentChild"), undefined, newParentChildDocs);
 	}
 	
 	// Export model - metamodel
-	collections = List(	Structure("name", graphName+"_IsA", "type", "edge"));		
+	collections = List(	Structure("name", getCollectionName(graphName, "IsA"), "type", "edge"));		
 	ok = prepareCollections(collections);
 	if ( ok )
 	{
 		newIsADocs = undefined;
-		addNewDocuments(isADocs, graphName+"_IsA", undefined, newIsADocs);
+		addNewDocuments(isADocs, getCollectionName(graphName, "IsA"), undefined, newIsADocs);
 	}	
 }
 
@@ -565,31 +565,35 @@ function hasNameAsMember(object)
 	return object is "MM_Folder" || object is "MM_ModelPackage" || object is "AbstractFolder";
 }
 
+function getCollectionName(graphName, collection) {
+	return graphName.empty() ? collection : format("%s_%s", graphName, collection);
+}
+
 function getArangoId(object, graphName)
 {
 	if ( object is "AbstractRelation" )
 	{
-		return graphName+"_Relations" + "/" + object.id(); 
+		return getCollectionName(graphName, "Relations") + "/" + object.id(); 
 	}
 	else 
 	{
-		return graphName+"_Objects" + "/" + object.id(); 
+		return getCollectionName(graphName, "Objects") + "/" + object.id(); 
 	}
 }
 
 function getArangoTypeId(fullTypeName, graphName)
 {
-	return graphName+"_Types" + "/" + fullTypeName; 
+	return getCollectionName(graphName, "Types") + "/" + fullTypeName; 
 }
 
 function getArangoPropertyId(propertyName, graphName)
 {
-	return graphName+"_Properties" + "/" + propertyName; 
+	return getCollectionName(graphName, "Properties") + "/" + propertyName; 
 }
 
 function getArangoProfileId(profileName, graphName)
 {
-	return graphName+"_Profiles" + "/" + profileName; 
+	return getCollectionName(graphName, "Profiles") + "/" + profileName; 
 }
 
 function getSynonyms(fullTypeName)
@@ -1621,10 +1625,10 @@ function getSettings()
 {
 	return Structure(
 		"url", "http://localhost:8529/",
-		"database", "demo",
-		"username", "root",
+		"database", "repo",
+		"username", "",
 		"password", "",
-		"graphName", "ValueSprints"
+		"graphName", ""
 	);
 }
 
