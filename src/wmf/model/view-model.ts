@@ -229,7 +229,7 @@ export class ViewModel extends MModel {
     const newView = new ViewModel(this.editor);
     const nodes = json.nodes;
     nodes.forEach((node: any) => {
-      const newNode = newView.addNode(node.type, node.name, node.id);
+      const newNode = newView.addNode(node._type, node._name, node.id);
       [ newNode.x, newNode.y, newNode.width, newNode.height, newNode._domain, newNode.shape ] = [ node.x, node.y, node.width, node.height, node._domain, node.shape ];
       if (node.properties) {
         const properties: IProperty[] = Object.values(node.properties).filter((prop: any) => Property.isProperty(prop)).map((prop) => prop as IProperty);
@@ -241,7 +241,7 @@ export class ViewModel extends MModel {
       const source = newView.nodes.find((n) => edge.source === n.id);
       const target = newView.nodes.find((n) => edge.target === n.id);
       if (source && target) {
-        newView.addEdge(edge.type, source, target, edge.name, edge.id);
+        newView.addEdge(edge._type, source, target, edge._name, edge.id);
       } else {
         console.log('Source or target not found for: ', edge, source, target)
       }

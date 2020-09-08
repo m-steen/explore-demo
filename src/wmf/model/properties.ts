@@ -87,9 +87,11 @@ class Property implements IProperty {
   label: string;
   @serializable(custom(serializePropertyType, deserializePropertyType))
   type: PropertyType;
+  @serializable
   category: string;
   @serializable(custom(serializeValue, deserializeValue))
   value: ValueType;
+  @serializable
   rawValue: any;
 
   constructor(name: string, label: string, type: PropertyType, category: string, value: ValueType, rawValue: any) {

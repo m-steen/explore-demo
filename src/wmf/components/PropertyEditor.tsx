@@ -59,7 +59,7 @@ function stringifyPropValue(property: IProperty): string {
         const elementType = property.type[0];
         return (property.value as ValueType[]).map((val) => stringifyPropValue(new Property('element', 'element', elementType, elementType.toString(), val, val))).join(', ');
       }
-      console.log('Unknown property type: ' + property.type, property)
+      console.log('Unknown property type: ' + property.category, property)
       return property.value?.toString() || '';
     }
   }

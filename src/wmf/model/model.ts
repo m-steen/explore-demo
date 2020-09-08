@@ -41,7 +41,7 @@ export class MObject {
   @observable _type: string;
   @serializable
   @observable _domain: string = '';
-
+  @serializable
   _isContainer: boolean = false;
   @observable parentID: string | null = null;
   @observable children: string[] = [];

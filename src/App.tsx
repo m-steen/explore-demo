@@ -216,7 +216,7 @@ class App extends React.Component {
     const view = this.editor.view;
     view.relations = [];
     view.objects = [object];
-    this.editor.filter = { layers: [], types: [], relations: [], outgoing: true, incoming: true };
+    this.editor.filter = { layers: [], types: [], relations: [], outgoing: true, incoming: true, derived: false };
     this.editor.repository.expandRelations(object as ViewNode, this.editor.filter, this.editor.view)
       .then(() => view.layout.apply());
   }

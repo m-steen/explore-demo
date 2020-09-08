@@ -54,6 +54,7 @@ export class ExpandForm extends React.Component<IExpandForm> {
             <Form.Group>
               <Form.Check inline key='outgoingCheckbox' name='outgoing' type='checkbox' label='Outgoing' checked={filter.outgoing} onChange={this.toggleCheckbox} />
               <Form.Check inline key='incomingCheckbox' name='incoming' type='checkbox' label='Incoming' checked={filter.incoming} onChange={this.toggleCheckbox} />
+              <Form.Check key='derivedCheckbox' name='derived' type='checkbox' label='Include derived relations' checked={filter.derived} onChange={this.toggleCheckbox} />
             </Form.Group>
             <Form.Label>Only expand to the following object types...</Form.Label>
             <Select key='typeSelect' styles={{ container: (provided) => ({ ...provided, width: '100%' }) }}

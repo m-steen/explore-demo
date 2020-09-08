@@ -96,7 +96,7 @@ class ArangoRepository implements Repository {
   }
 
   fetchObjects(view: ViewModel, query: string, filter: Filter) {
-    const iteratorPart = query.length === 0 ? aql`FOR object IN Objects` : aql`FOR object IN FULLTEXT("Objects", "name", ${query})`;
+    const iteratorPart = query.length === 0 ? aql`FOR object IN Objects` : aql`FOR object IN FULLTEXT("Objects", "_name", ${query})`;
     const layerFilter = filter.layers.length > 0 ? aql`FILTER object._domain IN ${filter.layers}` : aql``;
     const typeFilter = filter.types.length > 0 ? aql`FILTER object._type IN ${filter.types}` : aql``;
 
@@ -129,7 +129,6 @@ class ArangoRepository implements Repository {
                   node?.setProperty(key, object[key]);
                 }
               });
-              console.log(object.name, parents, children.map((c) => c.id))
               if (parents.length > 0 && parents[0]) {
                 node.parentID = parents[0].id;
               }
@@ -183,9 +182,10 @@ class ArangoRepository implements Repository {
     (source, filter, view) => {
       const relationFilter = filter.relations.length > 0 ? aql`FILTER relation._type IN ${filter.relations}` : aql``;
       const typeFilter = filter.types.length > 0 ? aql`FILTER target._type IN ${filter.types}` : aql``;
+      const graph = filter.derived ? 'derivedRelations' : 'objectRelations';
       const aquery = aql`
         FOR target, relation, p IN 1..1 OUTBOUND ${'Objects/' + source.id}
-        GRAPH "objectRelations"
+        GRAPH ${graph}
         ${relationFilter}
         ${typeFilter}
         LET parents = (
@@ -239,9 +239,11 @@ class ArangoRepository implements Repository {
     (target, filter, view) => {
       const relationFilter = filter.relations.length > 0 ? aql`FILTER relation._type IN ${filter.relations}` : aql``;
       const typeFilter = filter.types.length > 0 ? aql`FILTER source._type IN ${filter.types}` : aql``;
+      const graph = filter.derived ? 'derivedRelations' : 'objectRelations';
+      console.log('graph', graph)
       const aquery = aql`
         FOR source, relation, p IN 1..1 INBOUND ${'Objects/' + target.id}
-        GRAPH "objectRelations"
+        GRAPH ${graph}
         ${relationFilter}
         ${typeFilter}
         LET parents = (
@@ -256,6 +258,7 @@ class ArangoRepository implements Repository {
         )
         RETURN {source, parents, children, relation, target: DOCUMENT(${'Objects/' + target.id})}
       `
+      console.log(aquery)
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {

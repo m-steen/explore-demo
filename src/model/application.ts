@@ -23,6 +23,7 @@ export interface Filter {
   relations: string[];
   outgoing: boolean;
   incoming: boolean;
+  derived: boolean;
 }
 
 class Application extends Editor {
@@ -121,11 +122,11 @@ class Application extends Editor {
     'TriggeringRelation',
     'UseRelation',
   ];
-  @observable filter: Filter = { layers: [], types: [], relations: [], outgoing: true, incoming: false };
+  @observable filter: Filter = { layers: [], types: [], relations: [], outgoing: true, incoming: false, derived: false };
 
   resetFilters = () => {
     this.query = '';
-    this.filter =  { layers: [], types: [], relations: [], outgoing: true, incoming: false };
+    this.filter =  { layers: [], types: [], relations: [], outgoing: true, incoming: false, derived: this.filter.derived };
   }
 
   @observable scopeModel = new ViewModel(this);
@@ -164,7 +165,7 @@ class Application extends Editor {
         this.clearSelection();
         this.view.relations = [];
         this.view.objects = [node];
-        this.filter = { layers: [], types: [], relations: [], outgoing: true, incoming: true };
+        this.filter = { layers: [], types: [], relations: [], outgoing: true, incoming: true, derived: false };
         return this.repository.expandRelations(node, this.filter, this.view)
           .then(() => this.view.layout.apply());
       };
