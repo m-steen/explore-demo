@@ -82,6 +82,9 @@ export class ViewEdge extends ViewNode {
 
   constructor(readonly view: ViewModel, type: string, source: ViewNode, target: ViewNode, name?: string, id?: string) {
     super(view, type, name, id);
+    if (this._name === this._type) {
+      this._name = this._type.replace('Relation', '');
+    }
     this.source = source;
     this.target = target;
   }

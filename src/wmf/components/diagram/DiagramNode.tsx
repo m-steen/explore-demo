@@ -14,8 +14,8 @@ class DiagramNode extends React.Component<DiagramNodeProps> {
 
   render() {
     const { node } = this.props;
-    const labelPos = { x: node.x + node.width / 2, y: node.y + node.height + 15 };
-    const textStyle: React.CSSProperties = { fontSize: 10, textAlign: "center" };
+    const labelPos = { x: node.x, y: node.y + node.height + 15 };
+    const textStyle: React.CSSProperties = { fontSize: 20, textAlign: "center" };
     return (
       <DraggableCore onStart={this.handleDragStart} onDrag={this.handleDrag}>
         <g onClick={this.handleClick} onContextMenu={this.handleContextMenu}>
