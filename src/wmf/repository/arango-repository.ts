@@ -240,7 +240,6 @@ class ArangoRepository implements Repository {
       const relationFilter = filter.relations.length > 0 ? aql`FILTER relation._type IN ${filter.relations}` : aql``;
       const typeFilter = filter.types.length > 0 ? aql`FILTER source._type IN ${filter.types}` : aql``;
       const graph = filter.derived ? 'derivedRelations' : 'objectRelations';
-      console.log('graph', graph)
       const aquery = aql`
         FOR source, relation, p IN 1..1 INBOUND ${'Objects/' + target.id}
         GRAPH ${graph}
@@ -258,7 +257,6 @@ class ArangoRepository implements Repository {
         )
         RETURN {source, parents, children, relation, target: DOCUMENT(${'Objects/' + target.id})}
       `
-      console.log(aquery)
       return this.db.query(aquery)
         .then((array) => {
           transaction(() => {

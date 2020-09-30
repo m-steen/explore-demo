@@ -135,14 +135,15 @@ class Application extends Editor {
   constructor(title: string = '') {
     super(new ArangoRepository());
     this.title = title;
-    // this.repository.setUrl('https://big.bizzdesign.io:8530');
-    this.repository.login('', '')
+    this.repository.setUrl('https://big.bizzdesign.io:8530');
+    this.repository.login('demo', 'BiZZdesignInnovationgroup2020')
       .then((result) => {
         if (result === 'success') {
-          if (this.repository.selectDatabase('repo')) {
+          if (this.repository.selectDatabase('demo')) {
             console.log('Database selected')
-            this.repository.fetchObjects(this.scopeModel, '', { ...this.filter, types: ['MM_ModelPackage'] })
+            this.repository.fetchObjects(this.scopeModel, '', { ...this.filter, types: ['MM_ModelPackage', 'ArchiMateMM_Model'] })
               .then(() => {
+                this.clearSelection();
                 this.scope = this.scopeModel.objects.map((obj) => obj.id);
                 console.log('Initial scope: ', this.scope);
               })
