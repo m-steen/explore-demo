@@ -87,6 +87,11 @@ function encodeJSON(element, byref result, byref err)
 	{
 		return encodeString(element.toString(), result, err);
 	}
+	else if (element.isLink())
+	{
+		result	= "null";
+		return true;
+	}
 	else
 	{
 		err = "Invalid element";
@@ -636,12 +641,20 @@ function getArangoDBId(object)
 function attrsToDocs(object)
 {
 	docs = Index();
+	metamodel = object.metaModel();
+	concept = object.type().name();
 	forall attr in object.attrs()
 	{
-//		attr = object.attr("name");
 		attrName = attr.name();
 		attrValue = object.attrValue(attrName);
 		attrProfile = attr.profile();
+		attrType = Component.reflect:getAttribute(metamodel, concept, attrName, attrProfile.name());
+
+		if (attrType != undefined && attrType.isHidden() && attrName != "doc") {
+			// skip all hidden attributes, except for 'doc'
+			continue;
+		}
+
 		doc = docs.valueFor(attrProfile);
 		if (doc == undefined)
 		{
@@ -1033,7 +1046,11 @@ newNestingDocs = undefined;
 addNewDocuments(nestingDocs, "Nesting", undefined, newNestingDocs);
 
 newRelationDocs = undefined;
-addNewDocuments(relationDocs, "Relations", undefined, newNestingDocs);
+addNewDocuments(relationDocs, "Relations", undefined, newRelationDocs);
 
 newBlockDocs = undefined;
 addNewDocuments(blockDocs, "Blocks", undefined, newBlockDocs);
+// forall block in blockDocs {
+// 	output block;
+// 	addNewDocuments(block, "Blocks", undefined, newBlockDocs);
+// }
